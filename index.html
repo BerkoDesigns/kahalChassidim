@@ -19,7 +19,7 @@
     --text:      #1a1a1a;
     --dim:       #555;
   }
- 
+
   /* FIX: overflow:hidden removed from * — only applied where explicitly needed */
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -36,7 +36,7 @@
     border: 12px solid var(--gold);
     overflow: hidden;
   }
- 
+
   /* ── BRANDING BAR ─────────────────────────────────────────────── */
   .branding-bar {
     height: 5.5vh; display: flex; align-items: center;
@@ -610,7 +610,7 @@ function updateUI() {
 // Cache is updated only when a valid response arrives.
 function loadData() {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15-second timeout (increased from 5)
     
     fetch(SCRIPT_URL + "?cb=" + new Date().getTime(), { signal: controller.signal })
     .then(r => r.json())
