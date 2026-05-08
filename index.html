@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Bayswater Master Board</title>
-<!-- Version 3.5 – May 2026 -->
+<!-- Version 3.5 – May 2026 (with Friday Tachanun Rule) -->
 <!-- Cache-busting headers — ensures TV displays latest version -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -227,7 +227,7 @@
 
 <script>
 /**
- * THE BAYSWATER PROTOCOL — Version 3.5  |  May 2026
+ * THE BAYSWATER PROTOCOL — Version 3.5 (14 Rules)  |  May 2026
  * ─────────────────────────────────────────────────────────────────────
  * RULE 1   CLOCK           12h format, ticking seconds. Hour hugs colon (no gap on single digit).
  * RULE 2   MATH            Rabbeinu Tam = Col W (72 min) + 2 min (shul minhag) = 74 min after sunset.
@@ -256,6 +256,10 @@
  *                          Yom Tov: detected from Col AA = "Y" ONLY — NOT from holidayText.
  *                          This prevents Rosh Chodesh, fast days, Chol Hamoed from freezing image.
  *                          Rotation resumes after Rabbeinu Tam / when Col AA is not "Y".
+ * RULE 13  FRIDAY TACHANUN  Every Friday (Erev Shabbat) display אין אומרים תחנון / ערב שבת קודש.
+ *                          EXCEPTIONS: Yom Tov days (Col AA = "Y"), עשרה בטבת (10th Tevet),
+ *                          or if Col D (holiday text) / Col Z (tachanun override) already set.
+ *                          This is teal-box (no tachanun indicator) before Rabbeinu Tam.
  * ─────────────────────────────────────────────────────────────────────
  * MOLED FORMAT (moled sheet Col A, no header):
  *   "DayName, Month DD, YYYY, H:MM am/pm and X chalakim"
@@ -386,6 +390,14 @@ function isNineDays(hebDate) {
         if (hebDate.startsWith(d)) return true;
     }
     return false;
+}
+
+// ── HELPER: DETECT עשרה בטבת (10th of Tevet) ────────────────────
+function isEsseraBTevet(hebDate) {
+    // עשרה בטבת is always the 10th of Tevet (never skipped)
+    if (!hebDate) return false;
+    // Look for "י'" (10) followed by "טבת"
+    return hebDate.includes("י'") && hebDate.includes("טבת");
 }
 
 // ── RULE 12: SHABBOS IMAGE ────────────────────────────────────────
@@ -524,7 +536,7 @@ function updateUI() {
         $('O2').innerText = summerMsg; $('O_BECHINA').style.display = 'none'; fit($('O2'), 5.5);
     }
 
-    // RULES 4, 8, 9: Status box
+    // RULES 4, 8, 9, 13: Status box
     let tR    = (dDate.tachReason || "").trim();
     let hText = (holidayText || "").trim();
     let dayW  = now.getDay();
@@ -556,6 +568,11 @@ function updateUI() {
     } else if (tR !== "" && !isPastRT) {
         // Tachanun override — only before RT
         head = "אין אומרים תחנון"; sub = tR; cls = "teal-box";
+    } else if (dayW === 5 && !isYomTov && !isEsseraBTevet(dDate.heb) && !isPastRT) {
+        // RULE 13: Friday (Erev Shabbat) — אין אומרים תחנון / ערב שבת קודש
+        // Shows until candle lighting OR Rabbeinu Tam, whichever comes first
+        // (unless it's Yom Tov or עשרה בטבת - 10th of Tevet)
+        head = "אין אומרים תחנון"; sub = "ערב שבת קודש"; cls = "teal-box";
     } else {
         // Default — מוריד הטל / ותן ברכה
         head = "מוריד הטל"; sub = "ותן ברכה";
@@ -648,4 +665,3 @@ setInterval(updateUI, 10000); updateUI();
 </script>
 </body>
 </html>
-
