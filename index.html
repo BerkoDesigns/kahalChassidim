@@ -29,6 +29,72 @@
     width: 100vw; height: 100vh; overflow: hidden;
   }
 
+  /* ── SHAVUOT FLOWER BORDER ────────────────────────────────────────── */
+  #flowerBorderFrame {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1;
+    background-image: url('https://raw.githubusercontent.com/BerkoDesigns/kahalChassidim/main/Floral%20Frame%20Made%20of%20Pink%20and%20Red%20Roses.jpeg');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    display: none;
+  }
+
+  body.shavuot-mode {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.shavuot-mode #flowerBorderFrame {
+    display: block;
+  }
+
+  body.shavuot-mode .master-frame {
+    height: calc(100vh - 90px);
+    width: calc(100vw - 90px);
+    margin: 45px;
+    border: none;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 10;
+  }
+
+  /* ── SHAVUOT MODE: BLACK TEXT FOR TOP ROW ──────────────────────── */
+  body.shavuot-mode .branding-shul {
+    color: #000000 !important;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+  }
+
+  body.shavuot-mode #ENG_SIDE {
+    color: #000000 !important;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+  }
+
+  body.shavuot-mode #ENG_DATE {
+    color: #000000 !important;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+  }
+
+  body.shavuot-mode #WEATHER {
+    color: #000000 !important;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+  }
+
+  body.shavuot-mode #BSD {
+    color: #000000 !important;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+  }
+
   .master-frame {
     height: 100vh; width: 100vw;
     display: flex; flex-direction: column;
@@ -156,7 +222,7 @@
     align-items: center; justify-content: center;
     padding: 4px 6px; text-align: center; overflow: hidden;
   }
-  #O2 { color: #1a4a3a; font-weight: 600; line-height: 1.0; width: 96%; display: block; margin: 0 auto; word-wrap: break-word; overflow: hidden; }
+  #O2 { color: #1a4a3a; font-weight: 600; line-height: 1.2; width: 96%; display: block; margin: 0 auto; word-wrap: break-word; overflow: hidden; font-size: 3.8vh; }
   #O_BECHINA { font-size: 3.5vh; color: #1a4a3a; border-top: 1px solid #a0c8c0; padding-top: 2px; margin-top: 4px; width: 90%; overflow: hidden; }
 
   #SLEEP_OVERLAY { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10000; display: none; }
@@ -164,6 +230,9 @@
 </style>
 </head>
 <body>
+
+<!-- Shavuot Flower Border Frame -->
+<div id="flowerBorderFrame"></div>
 
 <div id="SLEEP_OVERLAY"><div id="SLEEP_CLOCK">00:00:00</div></div>
 
@@ -470,6 +539,7 @@ function updateUI() {
     // Optional: Admin override via localStorage
     // let adminNightModeDisabled = localStorage.getItem('nightModeOverride') === 'true';
 
+
     // RULE 5: Sleep 1–5 AM (unless Shavuot or admin override is active)
     if (!isHolidayStayAwake && h >= 1 && h < 5) {
         $('SLEEP_OVERLAY').style.display = 'block';
@@ -480,6 +550,14 @@ function updateUI() {
         }
         return;
     } else { $('SLEEP_OVERLAY').style.display = 'none'; }
+
+    // ── SHAVUOT FLOWER BORDER (PRODUCTION MODE) ──────────────────
+    // Flowers only show on Shavuot (when isHolidayStayAwake is true)
+    if (isHolidayStayAwake) {
+        document.body.classList.add('shavuot-mode');
+    } else {
+        document.body.classList.remove('shavuot-mode');
+    }
 
     // RULE 3: Flip logic
     // rtSecs = Rabbeinu Tam time in seconds — Col W + 2 min (shul minhag)
@@ -522,7 +600,12 @@ function updateUI() {
     let omerKey     = dOmer.omerNum ? String(dOmer.omerNum).trim() : null;
     let summerMsg   = dOmer.clmF || defaultSummerMsg;
 
-    if (isMoledDisplay) {
+    if (isHolidayStayAwake) {
+        // SHAVUOT: Special message with flowers
+        $('O2').innerText = "🌸 זמן מתן תורתינו 🌸\nא פרייליכען יום טוב שבועות 🌺";
+        $('O_BECHINA').style.display = 'none';
+        fit($('O2'), 3.5);
+    } else if (isMoledDisplay) {
         // 1st: Molad display (Shabbat morning 9am-12:30pm only)
         $('O2').innerText = moledText; $('O_BECHINA').style.display = 'none'; fit($('O2'), 4.2);
     } else if (omerKey) {
@@ -552,30 +635,61 @@ function updateUI() {
 
     let head = "", sub = "", cls = "gold-box";
     if (isShab) {
-        // Shabbos — unchanged
-        head = (moledText && isMoledDisplay) ? "שבת מברכים" : "שבת קודש"; sub = hText;
+        // Shabbos
+        if (isYomTov && hText) {
+            // Shabbat that is also Yom Tov — show both on main line
+            head = "שבת / " + hText;
+            sub = "";
+            cls = "teal-box";
+        } else if (moledText && isMoledDisplay) {
+            head = "שבת מברכים";
+            sub = hText;
+        } else {
+            head = "שבת קודש";
+            sub = hText;
+        }
     } else if (isMotz) {
-        // Motzei Shabbos — unchanged, Col D + ותודיענו or plain
+        // Motzei Shabbos — show Vatodieinu if there's holiday text, otherwise Ata Chonantanu
         head = hText !== "" ? hText : "מוצאי שבת";
         sub  = hText !== "" ? "ותודיענו" : "אתה חוננתנו";
         if (hText !== "") cls = "teal-box";
-    } else if (isYomTov && isPastRT) {
-        // After RT on Yom Tov day (Col AA = Y) → מוצאי יום טוב
-        head = "מוצאי יום טוב"; sub = ""; cls = "gold-box";
+    } else if (isYomTov) {
+        // Yom Tov day (Col AA = Y)
+        // BUT: if next day is NOT Yom Tov (Col AA ≠ Y) AND we're past RT, holiday has ended
+        let dNextDay = schedule[getIso(new Date(now.getTime() + 86400000))];
+        let nextDayIsYomTov = dNextDay && (dNextDay.yomtov === "Y");
+        
+        if (!nextDayIsYomTov && isPastRT) {
+            // Holiday ended — show Motzei Yom Tov
+            head = "מוצאי יום טוב"; sub = "אתה חוננתנו"; cls = "gold-box";
+        } else {
+            // Still in holiday — show the text
+            head = hText || "יום טוב"; sub = tR; cls = "teal-box";
+        }
     } else if (hText !== "" && !isPastRT) {
         // Col D text — only before RT
         head = hText; sub = tR; cls = "teal-box";
     } else if (tR !== "" && !isPastRT) {
         // Tachanun override — only before RT
         head = "אין אומרים תחנון"; sub = tR; cls = "teal-box";
-    } else if (dayW === 5 && !isYomTov && !isEsseraBTevet(dDate.heb) && !isPastRT) {
-        // RULE 13: Friday (Erev Shabbat) — אין אומרים תחנון / ערב שבת קודש
-        // Shows until candle lighting OR Rabbeinu Tam, whichever comes first
-        // (unless it's Yom Tov or עשרה בטבת - 10th of Tevet)
-        head = "אין אומרים תחנון"; sub = "ערב שבת קודש"; cls = "teal-box";
     } else {
-        // Default — מוריד הטל / ותן ברכה
-        head = "מוריד הטל"; sub = "ותן ברכה";
+        // Check if yesterday was Yom Tov (for Motzei Yom Tov after midnight)
+        let dYesterday = schedule[getIso(new Date(now.getTime() - 86400000))];
+        let yesterdayWasYomTov = dYesterday && (dYesterday.yomtov === "Y");
+        let yesterdayHText = (dYesterday && dYesterday.holidayText) || "";
+        
+        if (yesterdayWasYomTov && cSec < getSec(dToday.z[0], false)) {
+            // After midnight but before Alos — still in Motzei Yom Tov
+            head = "מוצאי יום טוב"; sub = "אתה חוננתנו"; cls = "gold-box";
+        } else if (dayW === 5 && !isYomTov && !isEsseraBTevet(dDate.heb) && !isPastRT) {
+            // RULE 13: Friday (Erev Shabbat) — אין אומרים תחנון / ערב שבת קודש
+            // Shows until candle lighting OR Rabbeinu Tam, whichever comes first
+            // (unless it's Yom Tov or עשרה בטבת - 10th of Tevet)
+            head = "אין אומרים תחנון"; sub = "ערב שבת קודש"; cls = "teal-box";
+        } else {
+            // Default — מוריד הטל / ותן ברכה
+            head = "מוריד הטל"; sub = "ותן ברכה";
+        }
     }
 
     // RULE 10: Kiddush Levana
