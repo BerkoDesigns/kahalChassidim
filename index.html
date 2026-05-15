@@ -477,7 +477,7 @@ function updateUI() {
     
     // TESTING: Force Saturday (6) for Shabbat Mevarchim testing
     // Comment this out when not testing:
-    now.getDay = () => 6;
+    // now.getDay = () => 6;
     
     let h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
     let cSec = (h*3600) + (m*60) + s;
@@ -548,7 +548,7 @@ function updateUI() {
         // RULE 6: Shavuot special message
         $('O2').innerText = "🌸 זמן מתן תורתינו 🌸\nא פרייליכען יום טוב שבועות 🌺";
         $('O_BECHINA').style.display = 'none';
-        fitExpand($('O2'), 3.0, 6.0);  // Expand to fill omer box
+        fitExpand($('O2'), 3.0, 5.0);  // Expand to fill omer box (reduced max)
     } else if (isMoledDisplay) {
         // Format molad: split "מולד חודש [month]:" from details
         let moledFormatted = moledText;
@@ -562,7 +562,7 @@ function updateUI() {
         }
         $('O2').innerText = moledFormatted; 
         $('O_BECHINA').style.display = 'none'; 
-        fitExpand($('O2'), 3.0, 8.0);  // Expand UP to 8.0vh max for molad
+        fitExpand($('O2'), 3.0, 5.5);  // Expand UP for molad (reduced max)
     } else if (omerKey) {
         $('O2').innerText = "היום " + (OMER_STRINGS[omerKey] || omerKey + " יום") + " לעומר";
         if (dOmer.bechina) { 
@@ -571,13 +571,13 @@ function updateUI() {
         } else { 
             $('O_BECHINA').style.display = 'none'; 
         }
-        fitExpand($('O2'), 5.0, 6.0);  // Expand omer to fill box
-        fitExpand($('O_BECHINA'), 3.0, 4.0);  // Expand bechina
+        fitExpand($('O2'), 5.0, 5.5);  // Expand omer to fill box (reduced max)
+        fitExpand($('O_BECHINA'), 3.0, 3.5);  // Expand bechina (reduced max)
     } else {
         // Summer message - expand to fill space
         $('O2').innerText = defaultSummerMsg || "קהל חסידים"; 
         $('O_BECHINA').style.display = 'none'; 
-        fitExpand($('O2'), 4.0, 8.0);  // Expand UP to 8.0vh max for summer msg
+        fitExpand($('O2'), 4.0, 6.0);  // Expand UP for summer msg (reduced max)
     }
 
     // RULE 4: STATUS BOX PRIORITY
@@ -736,8 +736,8 @@ function loadData() {
             rotateP1();
             p1RotateTimer = setInterval(rotateP1, 15000);
         }
-        $('ANN').innerText = d.announcements || ""; fitExpand($('ANN'), 3.5, 6.0);
-        $('TEF').innerText = d.tefila || ""; fitExpand($('TEF'), 3.5, 6.0);
+        $('ANN').innerText = d.announcements || ""; fitExpand($('ANN'), 3.5, 5.0);
+        $('TEF').innerText = d.tefila || ""; fitExpand($('TEF'), 3.5, 5.0);
         if (d.p4) $('p4').src = "https://drive.google.com/thumbnail?id=" + d.p4 + "&sz=w1200";
         if (d.p5) $('p5').src = "https://drive.google.com/thumbnail?id=" + d.p5 + "&sz=w1200";
         moladList = [];
