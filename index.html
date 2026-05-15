@@ -736,8 +736,8 @@ function loadData() {
             rotateP1();
             p1RotateTimer = setInterval(rotateP1, 15000);
         }
-        $('ANN').innerText = d.announcements || ""; fitExpand($('ANN'), 3.5, 4.5);
-        $('TEF').innerText = d.tefila || ""; fitExpand($('TEF'), 3.5, 4.5);
+        $('ANN').innerText = d.announcements || ""; fitExpand($('ANN'), 2.8, 3.8);
+        $('TEF').innerText = d.tefila || ""; fitExpand($('TEF'), 2.8, 3.8);
         if (d.p4) $('p4').src = "https://drive.google.com/thumbnail?id=" + d.p4 + "&sz=w1200";
         if (d.p5) $('p5').src = "https://drive.google.com/thumbnail?id=" + d.p5 + "&sz=w1200";
         moladList = [];
