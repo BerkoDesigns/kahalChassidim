@@ -176,9 +176,9 @@
   .data-box {
     flex: 1.2; border: 2px solid var(--gold); border-radius: 10px;
     background: var(--box); display: flex; align-items: center;
-    justify-content: center; text-align: center; padding: 8px 12px; overflow: hidden;
+    justify-content: center; text-align: center; padding: 4px 6px; overflow: hidden;
   }
-  .data-box span { font-weight: 400; font-size: 4.8vh; line-height: 1.1; display: block; width: 100%; word-wrap: break-word; color: var(--text); }
+  .data-box span { font-weight: 400; font-size: 3.2vh; line-height: 1.3; display: block; width: 100%; word-wrap: break-word; white-space: pre-wrap; color: var(--text); }
   .img-box {
     flex: 1.5; border: 2px solid var(--gold); border-radius: 10px;
     background: var(--box2); overflow: hidden; position: relative;
@@ -736,8 +736,8 @@ function loadData() {
             rotateP1();
             p1RotateTimer = setInterval(rotateP1, 15000);
         }
-        $('ANN').innerText = d.announcements || ""; fitExpand($('ANN'), 2.5, 4.2);
-        $('TEF').innerText = d.tefila || ""; fitExpand($('TEF'), 2.5, 4.2);
+        $('ANN').innerText = d.announcements || ""; fit($('ANN'), 3.2);
+        $('TEF').innerText = d.tefila || ""; fit($('TEF'), 3.2);
         if (d.p4) $('p4').src = "https://drive.google.com/thumbnail?id=" + d.p4 + "&sz=w1200";
         if (d.p5) $('p5').src = "https://drive.google.com/thumbnail?id=" + d.p5 + "&sz=w1200";
         moladList = [];
