@@ -175,10 +175,23 @@
   .content-col { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
   .data-box {
     flex: 1.2; border: 2px solid var(--gold); border-radius: 10px;
-    background: var(--box); display: flex; align-items: center;
-    justify-content: center; text-align: center; padding: 4px 6px; overflow: hidden;
+    background: var(--box); display: flex; flex-direction: column;
+    align-items: stretch; justify-content: flex-start;
+    padding: 0; overflow: hidden;
   }
-  .data-box span { font-weight: 400; font-size: 3.2vh; line-height: 1.3; display: block; width: 100%; word-wrap: break-word; white-space: pre-wrap; color: var(--text); }
+  .data-box-title {
+    display: none; background: var(--gold-dark); color: #FAF8F0;
+    font-weight: 700; font-size: 3.0vh; line-height: 1.2;
+    text-align: center; padding: 4px 6px;
+    border-radius: 8px 8px 0 0; width: 100%; flex-shrink: 0;
+    font-family: 'Heebo', sans-serif; letter-spacing: 0.3px;
+  }
+  .data-box-title.visible { display: block; }
+  .data-box-content {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 4px 6px; overflow: hidden;
+  }
+  .data-box span { font-weight: 400; font-size: 3.2vh; line-height: 1.3; display: block; width: 100%; word-wrap: break-word; white-space: pre-wrap; color: var(--text); text-align: center; }
   .img-box {
     flex: 1.5; border: 2px solid var(--gold); border-radius: 10px;
     background: var(--box2); overflow: hidden; position: relative;
@@ -250,10 +263,16 @@
 
     <div class="content-col">
       <div style="height:49%; display:flex; gap:10px;">
-        <div class="data-box" style="flex:1.2;"><span id="ANN">טוען מידע...</span></div>
+        <div class="data-box" style="flex:1.2;">
+          <div class="data-box-title" id="ANN-title">זמנים התפילה בימי חול</div>
+          <div class="data-box-content"><span id="ANN">טוען מידע...</span></div>
+        </div>
         <!-- RULE 12: SHABBAT IMAGE FREEZE ──────────────────────────────────────────────── -->
         <div class="img-box" style="flex:1.5;"><img id="p1" src="" alt=""></div>
-        <div class="data-box" style="flex:1.2;"><span id="TEF">טוען מידע...</span></div>
+        <div class="data-box" style="flex:1.2;">
+          <div class="data-box-title" id="TEF-title">זמני התפילות לשבת ויום טוב</div>
+          <div class="data-box-content"><span id="TEF">טוען מידע...</span></div>
+        </div>
       </div>
       <div style="height:49%; display:flex; gap:10px;">
         <div class="img-box" style="flex:1.4;"><img id="p4" src="" alt=""></div>
@@ -736,6 +755,19 @@ function updateUI() {
     }
 }
 
+// HELPER: Render data-box content and show/hide title strip
+function setDataBox(id, text, showHeader) {
+    const titleEl = $(id + '-title');
+    const contentEl = $(id);
+    if (showHeader) {
+        titleEl.classList.add('visible');
+    } else {
+        titleEl.classList.remove('visible');
+    }
+    contentEl.textContent = text;
+    fit(contentEl, 3.2);
+}
+
 // RULE 14: DATA LOAD
 function loadData() {
     const controller = new AbortController();
@@ -755,8 +787,8 @@ function loadData() {
             rotateP1();
             p1RotateTimer = setInterval(rotateP1, 15000);
         }
-        $('ANN').innerText = d.announcements || ""; fit($('ANN'), 3.2);
-        $('TEF').innerText = d.tefila || ""; fit($('TEF'), 3.2);
+        setDataBox('ANN', d.announcements || "", d.annHeader !== false);
+        setDataBox('TEF', d.tefila || "", d.tefHeader !== false);
         if (d.p4) $('p4').src = "https://drive.google.com/thumbnail?id=" + d.p4 + "&sz=w1200";
         if (d.p5) $('p5').src = "https://drive.google.com/thumbnail?id=" + d.p5 + "&sz=w1200";
         moladList = [];
