@@ -193,8 +193,8 @@
     align-items: center; justify-content: center;
     padding: 4px 6px; text-align: center; overflow: hidden;
   }
-  #O2 { color: #1a4a3a; font-weight: 600; line-height: 1.2; width: 96%; display: block; margin: 0 auto; word-wrap: break-word; overflow: hidden; font-size: 3.8vh; }
-  #O_BECHINA { font-size: 3.5vh; color: #1a4a3a; border-top: 1px solid #a0c8c0; padding-top: 2px; margin-top: 4px; width: 90%; overflow: hidden; }
+  #O2 { color: #1a4a3a; font-weight: 600; line-height: 1.3; width: 96%; display: block; margin: 0 auto; word-wrap: break-word; overflow: hidden; font-size: 3.8vh; }
+  #O_BECHINA { font-size: 3.5vh; color: #1a4a3a; border-top: 1px solid #a0c8c0; padding-top: 2px; margin-top: 4px; width: 96%; overflow: hidden; }
   
   /* RULE 5: NIGHT MODE ──────────────────────────────────────────────────────────────── */
   #SLEEP_OVERLAY { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10000; display: none; }
@@ -571,8 +571,8 @@ function updateUI() {
         } else { 
             $('O_BECHINA').style.display = 'none'; 
         }
-        fitExpand($('O2'), 5.0, 5.2);  // Much smaller max for omer
-        fitExpand($('O_BECHINA'), 3.0, 3.2);  // Much smaller max for bechina
+        fitExpand($('O2'), 5.0, 5.5);  // Max for omer
+        fitExpand($('O_BECHINA'), 3.0, 3.2);  // Max for bechina
     } else {
         // Summer message - expand to fill space
         $('O2').innerText = defaultSummerMsg || "קהל חסידים"; 
@@ -602,7 +602,12 @@ function updateUI() {
 
     let head = "", sub = "", cls = "gold-box";
     
-    if (isShab) {
+    // HIGHEST PRIORITY: ROSH CHODESH (any day of week, any time)
+    if (hText.includes("ראש חודש")) {
+        head = hText;
+        sub = "הלל, יעלה ויבא";
+        cls = "teal-box";
+    } else if (isShab) {
         // Shabbat (RULE 4)
         if (isYomTov && hText) {
             head = "שבת / " + hText;
@@ -648,12 +653,8 @@ function updateUI() {
         // Motzei Shabbat (RULE 9) - show Sunday's holiday if it exists
         if (hText !== "") {
             head = hText;
-            // If Sunday has Rosh Chodesh, show hallel text
-            if (hText.includes("ראש חודש")) {
-                sub = "הלל, יעלה ויבא";
-            } else {
-                sub = tR !== "" ? tR : "אתה חוננתנו";
-            }
+            // Note: if Sunday has Rosh Chodesh it was already caught above
+            sub = tR !== "" ? tR : "אתה חוננתנו";
             cls = "teal-box";
         } else {
             head = "מוצאי שבת";
@@ -673,17 +674,10 @@ function updateUI() {
             cls = "teal-box";
         }
     } else if (hText !== "" && !isPastRT) {
-        // Holiday text before RT (RULE 4, RULE 8)
-        if (hText.includes("ראש חודש")) {
-            // ROSH CHODESH on weekday
-            head = hText;
-            sub = "הלל, יעלה ויבא";
-            cls = "teal-box";
-        } else {
-            head = hText; 
-            sub = tR; 
-            cls = "teal-box";
-        }
+        // Holiday text before RT (RULE 4, RULE 8) - but NOT Rosh Chodesh (already caught above)
+        head = hText; 
+        sub = tR; 
+        cls = "teal-box";
     } else if (tR !== "" && !isPastRT) {
         // Tachanun override (RULE 4)
         head = "אין אומרים תחנון"; 
