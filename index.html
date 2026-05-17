@@ -276,7 +276,7 @@
  */
 
 const $ = id => document.getElementById(id);
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjNSAvH290v-6SFkXHJfFHAr8Kh4UlmZxAIQf7-PFFFHWTNOkYDGTggyPz130gG6_Low/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyodK2UN96Yd-6EYoM4jopsIJa2tMQlORxEx8KVgOxGXgeQg9Gh_qKKYrPPHYzrSJ4hXg/exec";
 
 var schedule = {}, moladList = [], p1Images = [], p1Index = 0, shabbosPic = "";
 var p1RotateTimer = null, isShabbosImageActive = false;
@@ -602,30 +602,33 @@ function updateUI() {
             cls = "teal-box";
         } else {
             // Check if this is Shabbat Mevarchim (look ahead for Rosh Chodesh in next 8 days)
+            // OR if Col D contains "מברכים"
+            let isMevarchimDay = hText && hText.includes("מברכים");
+            
             let rochDays = [];
-            let rochText = ""; // Will hold the full holiday text from lookahead
+            let rochText = "";
             for (let i = 1; i <= 8; i++) {
                 let futureDate = new Date(now.getTime() + (i * 86400000));
                 let futureIso = getIso(futureDate);
                 let futureData = schedule[futureIso];
                 if (futureData && futureData.holidayText && futureData.holidayText.includes("ראש חודש")) {
                     rochDays.push(DAY_NAMES[futureDate.getDay()]);
-                    if (!rochText) rochText = futureData.holidayText; // Get the full text (e.g., "ראש חודש סיון")
+                    if (!rochText) rochText = futureData.holidayText;
                 }
             }
             
-            if (rochDays.length > 0) {
-                // This is Shabbat Mevarchim - show "ראש חודש סיון יום ראשון"
+            if (isMevarchimDay || rochDays.length > 0) {
+                // This is Shabbat Mevarchim
                 let rochDisplay = "";
                 if (rochDays.length === 1) {
                     rochDisplay = rochText + " " + rochDays[0];
                 } else if (rochDays.length === 2) {
                     rochDisplay = rochText + " " + rochDays[0] + " ו" + rochDays[1];
-                } else {
+                } else if (rochDays.length > 2) {
                     rochDisplay = rochText + " " + rochDays.slice(0, -1).join(", ") + " ו" + rochDays[rochDays.length - 1];
                 }
                 head = "שבת מברכים";
-                sub = rochDisplay;
+                sub = rochDisplay || "";
                 cls = "teal-box";
             } else {
                 // Regular Shabbat
