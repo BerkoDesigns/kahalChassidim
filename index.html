@@ -590,15 +590,8 @@ function updateUI() {
     let isMotz    = (dayW===6 && cSec >= rtSecs);
     let isPastRT  = (cSec >= rtSecs);
     
-    // On Saturday after RT, use Sunday's holiday text for status box
-    let statusDate = dDate;
-    if (isMotz) {
-        let tomorrowIso = getIso(new Date(now.getTime() + 86400000));
-        let tomorrowData = schedule[tomorrowIso];
-        if (tomorrowData) statusDate = tomorrowData;
-    }
-    let hText = (statusDate.holidayText || "").trim();
-    let tR    = (statusDate.tachReason || "").trim();
+    let hText = (dDate.holidayText || "").trim();  // Use FLIPPED date (dDate flips to Sunday on Saturday after RT)
+    let tR    = (dDate.tachReason || "").trim();   // Use FLIPPED date for tachanun
 
     let head = "", sub = "", cls = "gold-box";
     
@@ -651,10 +644,21 @@ function updateUI() {
         }
     } else if (isMotz) {
         // Motzei Shabbat (RULE 9) - show Sunday's holiday if it exists
+        // Check if TOMORROW (Sunday) is a Yom Tov (for ותודיענו rule)
+        let dTomorrow = schedule[getIso(new Date(now.getTime() + 86400000))];
+        let tomorrowIsYomTov = dTomorrow && (dTomorrow.yomtov === "Y");
+        
         if (hText !== "") {
             head = hText;
             // Note: if Sunday has Rosh Chodesh it was already caught above
-            sub = tR !== "" ? tR : "אתה חוננתנו";
+            // RULE: ותודיענו ONLY when Motzei Shabbat + Tomorrow is Yom Tov
+            if (tomorrowIsYomTov) {
+                sub = "ותודיענו";
+            } else if (hText.includes("ראש חודש")) {
+                sub = "הלל, יעלה ויבא";
+            } else {
+                sub = tR !== "" ? tR : "אתה חוננתנו";
+            }
             cls = "teal-box";
         } else {
             head = "מוצאי שבת";
