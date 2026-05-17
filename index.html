@@ -180,13 +180,13 @@
     padding: 0; overflow: hidden;
   }
   .data-box-title {
-    display: none; background: var(--gold-dark); color: #FAF8F0;
+    display: block; background: var(--gold-dark); color: #FAF8F0;
     font-weight: 700; font-size: 2.0vh; line-height: 1.1;
     text-align: center; padding: 2px 6px;
     border-radius: 8px 8px 0 0; width: 100%; flex-shrink: 0;
     font-family: 'Heebo', sans-serif; letter-spacing: 0.3px;
   }
-  .data-box-title.visible { display: block; }
+  .data-box-title.text-hidden { color: transparent; }
   .data-box-content {
     flex: 1; display: flex; align-items: center; justify-content: center;
     padding: 4px 6px; overflow: hidden;
@@ -243,7 +243,7 @@
 
   <div class="main-body">
     <div class="zemanim-col" id="ZMANIM_LIST">
-      <div class="data-box-title visible">זמני היום</div>
+      <div class="data-box-title">זמני היום</div>
       <div class="z-row" id="r1"><span class="z-label">עלות השחר</span><span class="z-time" id="z1">--:--</span></div>
       <div class="z-row" id="r2"><span class="z-label">הנחת תפילין</span><span class="z-time" id="z2">--:--</span></div>
       <div class="z-row" id="r3"><span class="z-label">נץ החמה</span><span class="z-time" id="z3">--:--</span></div>
@@ -296,7 +296,7 @@
  */
 
 const $ = id => document.getElementById(id);
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjNSAvH290v-6SFkXHJfFHAr8Kh4UlmZxAIQf7-PFFFHWTNOkYDGTggyPz130gG6_Low/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxookrOr9L6Pj3zZXq4XWr6jmjobBzxLNzd7BsPVOXIW1NAl7BwHwOK-j73Sym0Z7ouJg/exec";
 
 var schedule = {}, moladList = [], p1Images = [], p1Index = 0, shabbosPic = "";
 var p1RotateTimer = null, isShabbosImageActive = false;
@@ -756,14 +756,14 @@ function updateUI() {
     }
 }
 
-// HELPER: Render data-box content and show/hide title strip
+// HELPER: Render data-box content and show/hide title text
 function setDataBox(id, text, showHeader) {
     const titleEl = $(id + '-title');
     const contentEl = $(id);
     if (showHeader) {
-        titleEl.classList.add('visible');
+        titleEl.classList.remove('text-hidden');
     } else {
-        titleEl.classList.remove('visible');
+        titleEl.classList.add('text-hidden');
     }
     contentEl.textContent = text;
     fit(contentEl, 3.2);
