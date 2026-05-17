@@ -156,7 +156,7 @@
   .main-body { height: 70vh; display: flex; gap: 10px; overflow: hidden; }
   .zemanim-col {
     width: 23vw; border: 2px solid var(--gold); border-radius: 10px;
-    display: flex; flex-direction: column; padding: 2px;
+    display: flex; flex-direction: column; padding: 0;
     background: var(--box); overflow: hidden;
   }
   .z-row {
@@ -181,8 +181,8 @@
   }
   .data-box-title {
     display: none; background: var(--gold-dark); color: #FAF8F0;
-    font-weight: 700; font-size: 3.0vh; line-height: 1.2;
-    text-align: center; padding: 4px 6px;
+    font-weight: 700; font-size: 2.0vh; line-height: 1.1;
+    text-align: center; padding: 2px 6px;
     border-radius: 8px 8px 0 0; width: 100%; flex-shrink: 0;
     font-family: 'Heebo', sans-serif; letter-spacing: 0.3px;
   }
@@ -243,6 +243,7 @@
 
   <div class="main-body">
     <div class="zemanim-col" id="ZMANIM_LIST">
+      <div class="data-box-title visible">זמני היום</div>
       <div class="z-row" id="r1"><span class="z-label">עלות השחר</span><span class="z-time" id="z1">--:--</span></div>
       <div class="z-row" id="r2"><span class="z-label">הנחת תפילין</span><span class="z-time" id="z2">--:--</span></div>
       <div class="z-row" id="r3"><span class="z-label">נץ החמה</span><span class="z-time" id="z3">--:--</span></div>
