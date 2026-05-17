@@ -276,7 +276,7 @@
  */
 
 const $ = id => document.getElementById(id);
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyodK2UN96Yd-6EYoM4jopsIJa2tMQlORxEx8KVgOxGXgeQg9Gh_qKKYrPPHYzrSJ4hXg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxookrOr9L6Pj3zZXq4XWr6jmjobBzxLNzd7BsPVOXIW1NAl7BwHwOK-j73Sym0Z7ouJg/exec";
 
 var schedule = {}, moladList = [], p1Images = [], p1Index = 0, shabbosPic = "";
 var p1RotateTimer = null, isShabbosImageActive = false;
@@ -581,8 +581,6 @@ function updateUI() {
     }
 
     // RULE 4: STATUS BOX PRIORITY
-    let tR    = (dDate.tachReason || "").trim();
-    let hText = (holidayText || "").trim();
     let dayW  = now.getDay();
     let candleSecs = getSec(candleTime, false);
     if (candleSecs < 43200) candleSecs += 43200;
@@ -591,6 +589,16 @@ function updateUI() {
     let isKodesh  = isShab || isYomTov;
     let isMotz    = (dayW===6 && cSec >= rtSecs);
     let isPastRT  = (cSec >= rtSecs);
+    
+    // On Saturday after RT, use Sunday's holiday text for status box
+    let statusDate = dDate;
+    if (isMotz) {
+        let tomorrowIso = getIso(new Date(now.getTime() + 86400000));
+        let tomorrowData = schedule[tomorrowIso];
+        if (tomorrowData) statusDate = tomorrowData;
+    }
+    let hText = (statusDate.holidayText || "").trim();
+    let tR    = (statusDate.tachReason || "").trim();
 
     let head = "", sub = "", cls = "gold-box";
     
@@ -637,10 +645,20 @@ function updateUI() {
             }
         }
     } else if (isMotz) {
-        // Motzei Shabbat (RULE 9)
-        head = hText !== "" ? hText : "מוצאי שבת";
-        sub  = hText !== "" ? "ותודיענו" : "אתה חוננתנו";
-        if (hText !== "") cls = "teal-box";
+        // Motzei Shabbat (RULE 9) - show Sunday's holiday if it exists
+        if (hText !== "") {
+            head = hText;
+            // If Sunday has Rosh Chodesh, show hallel text
+            if (hText.includes("ראש חודש")) {
+                sub = "הלל, יעלה ויבא";
+            } else {
+                sub = tR !== "" ? tR : "אתה חוננתנו";
+            }
+            cls = "teal-box";
+        } else {
+            head = "מוצאי שבת";
+            sub = "אתה חוננתנו";
+        }
     } else if (isYomTov) {
         // Yom Tov (RULE 4)
         let dNextDay = schedule[getIso(new Date(now.getTime() + 86400000))];
