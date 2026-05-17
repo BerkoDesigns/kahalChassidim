@@ -439,9 +439,11 @@ function isNineDays(hebDate) {
     return false;
 }
 
-// RULE 12: SHABBAT IMAGE FREEZE
-function updateP1Image(isKodesh) {
-    if (isKodesh && !isShabbosImageActive) {
+// RULE 12: KODESH (SHABBAT/YOM TOV) IMAGE FREEZE
+function updateP1Image(isShab, isYomTov = false) {
+    const shouldFreeze = isShab || isYomTov;
+
+    if (shouldFreeze && !isShabbosImageActive) {
         isShabbosImageActive = true;
         if (p1RotateTimer) { clearInterval(p1RotateTimer); p1RotateTimer = null; }
         if (shabbosPic) {
@@ -457,16 +459,14 @@ function updateP1Image(isKodesh) {
                 $('p1').style.opacity = 1; 
             }, 800);
         }
-    } else if (!isKodesh && isShabbosImageActive) {
+    } else if (!shouldFreeze && isShabbosImageActive) {
         isShabbosImageActive = false;
         if (p1Images.length > 0 && !p1RotateTimer) {
             rotateP1();
             p1RotateTimer = setInterval(rotateP1, 15000);
         }
     }
-}
-
-// RULE 1: CLOCK
+}// RULE 1: CLOCK
 function updateClock() {
     let now = new Date(), hh = (now.getHours() % 12 || 12);
     let mm = String(now.getMinutes()).padStart(2,'0'), ss = String(now.getSeconds()).padStart(2,'0');
@@ -743,7 +743,7 @@ function updateUI() {
     }
 
     // RULE 12: Image freeze
-    updateP1Image(isKodesh);
+    updateP1Image(isShab, isYomTov);
 
     // Active zman highlight
     let zT = []; 
