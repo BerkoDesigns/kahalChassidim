@@ -620,11 +620,19 @@ function updateUI() {
     let hText = (schedule[statusIso] ? (schedule[statusIso].holidayText || "") : (dDate.holidayText || "")).trim();
     let tR    = (schedule[statusIso] ? (schedule[statusIso].tachReason || "") : (dDate.tachReason || "")).trim();
 
+    // ראש חודש window: 20 min before RT the day before, through 20 min before RT on the day of
+    let rochCutoff = rtSecs - 1200;
+    let rochStart  = rtSecs - 1200;
+    let dTomorrowRoch = schedule[getIso(new Date(now.getTime() + 86400000))];
+    let tomorrowIsRochChodesh = dTomorrowRoch && (dTomorrowRoch.holidayText || "").includes("ראש חודש");
+    let showRochChodesh = (hText.includes("ראש חודש") && cSec < rochCutoff) ||
+                          (tomorrowIsRochChodesh && cSec >= rochStart);
+
     let head = "", sub = "", cls = "gold-box";
     
     // HIGHEST PRIORITY: ROSH CHODESH (any day of week, any time)
-    if (hText.includes("ראש חודש")) {
-        head = hText;
+    if (showRochChodesh) {
+        head = tomorrowIsRochChodesh && !hText.includes("ראש חודש") ? (dTomorrowRoch.holidayText || "ראש חודש") : hText;
         sub = "הלל, יעלה ויבא";
         cls = "teal-box";
     } else if (isShab) {
