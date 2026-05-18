@@ -304,6 +304,7 @@ var currentlyHighlightedId = null, currentStatusHTML = "", lastDateIso = "";
 var defaultSummerMsg = "";
 
 const allZRows = document.querySelectorAll('.z-row');
+const THREE_AM = 10800;
 
 const OMER_STRINGS = {
   1:"יום אחד", 2:"שני ימים", 3:"שלשה ימים", 4:"ארבעה ימים", 5:"חמשה ימים",
@@ -607,11 +608,17 @@ function updateUI() {
     let isShab    = (dayW===5 && candleTime && cSec >= candleSecs) || (dayW===6 && cSec < rtSecs);
     let isYomTov  = (dToday.yomtov === "Y");
     let isKodesh  = isShab || isYomTov;
-    let isMotz    = (dayW===6 && cSec >= rtSecs);
-    let isPastRT  = (cSec >= rtSecs);
-    
-    let hText = (dDate.holidayText || "").trim();  // Use FLIPPED date (dDate flips to Sunday on Saturday after RT)
-    let tR    = (dDate.tachReason || "").trim();   // Use FLIPPED date for tachanun
+    let isMotz   = (dayW===6 && cSec >= rtSecs) || (dayW===0 && cSec < THREE_AM);
+    let isPastRT = (cSec >= rtSecs);
+    let statusIso;
+    if (dayW===0 && cSec < THREE_AM) {
+        statusIso = getIso(now);
+    } else {
+        statusIso = dIso;
+    }
+
+    let hText = (schedule[statusIso] ? (schedule[statusIso].holidayText || "") : (dDate.holidayText || "")).trim();
+    let tR    = (schedule[statusIso] ? (schedule[statusIso].tachReason || "") : (dDate.tachReason || "")).trim();
 
     let head = "", sub = "", cls = "gold-box";
     
