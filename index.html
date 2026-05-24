@@ -423,7 +423,6 @@ function isEsseraBTevet(hebDate) {
 // RULE 10: KIDDUSH LEVANA
 function getKiddushLevana(now, hebDate, isShab, holidayText, dayOfWeek) {
     if (isShab) return false;
-    if (holidayText && holidayText.trim() !== "") return false;
     if (dayOfWeek === 5) return false;
     if (isNineDays(hebDate)) return false;
     let nowMs = now.getTime(), bestMolad = null;
@@ -599,10 +598,9 @@ function updateUI() {
         fitExpand($('O2'), 5.0, 5.5);  // Max for omer
         fitExpand($('O_BECHINA'), 3.0, 3.2);  // Max for bechina
     } else {
-        // Summer message - expand to fill space
-        $('O2').innerText = defaultSummerMsg || "קהל חסידים"; 
+        $('O2').innerText = defaultSummerMsg || ""; 
         $('O_BECHINA').style.display = 'none'; 
-        fitExpand($('O2'), 4.0, 5.0);  // Much smaller max for summer msg
+        if (defaultSummerMsg) fitExpand($('O2'), 4.0, 5.0);
     }
 
     // RULE 4: STATUS BOX PRIORITY
@@ -622,7 +620,7 @@ function updateUI() {
     }
 
     let hText = (schedule[statusIso] ? (schedule[statusIso].holidayText || "") : (dDate.holidayText || "")).trim();
-    let tR    = (schedule[statusIso] ? (schedule[statusIso].tachReason || "") : (dDate.tachReason || "")).trim();
+    let tR    = (schedule[statusIso] ? (schedule[statusIso].tachReason || "") : (dDate.tachReason || "") || (dToday.tachReason || "")).trim();
 
     // ראש חודש window: 20 min before RT the day before, through 20 min before RT on the day of
     let rochCutoff = rtSecs - 1200;
