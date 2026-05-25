@@ -206,6 +206,7 @@
     align-items: center; justify-content: center;
     padding: 4px 6px; text-align: center; overflow: hidden;
   }
+  #omer-pic { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
   #O2 { color: #1a4a3a; font-weight: 600; line-height: 1.3; width: 96%; display: block; margin: 0 auto; word-wrap: break-word; overflow: hidden; font-size: 3.8vh; }
   #O_BECHINA { font-size: 3.5vh; color: #1a4a3a; border-top: 1px solid #a0c8c0; padding-top: 2px; margin-top: 4px; width: 96%; overflow: hidden; }
   
@@ -305,7 +306,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjNSAvH290v-6SFkXHJ
 var schedule = {}, moladList = [], p1Images = [], p1Index = 0, shabbosPic = "";
 var p1RotateTimer = null, isShabbosImageActive = false;
 var currentlyHighlightedId = null, currentStatusHTML = "", lastDateIso = "";
-var defaultSummerMsg = "";
+var defaultSummerMsg = "", omerPic = "";
 
 const allZRows = document.querySelectorAll('.z-row');
 const THREE_AM = 10800;
@@ -597,7 +598,20 @@ function updateUI() {
         }
         fitExpand($('O2'), 5.0, 5.5);  // Max for omer
         fitExpand($('O_BECHINA'), 3.0, 3.2);  // Max for bechina
+    } else if (omerPic) {
+        $('O2').innerText = "";
+        $('O_BECHINA').style.display = 'none';
+        let omerBox = document.getElementById('OMER');
+        if (!document.getElementById('omer-pic')) {
+            let img = document.createElement('img');
+            img.id = 'omer-pic';
+            omerBox.appendChild(img);
+        }
+        document.getElementById('omer-pic').src = "https://drive.google.com/thumbnail?id=" + omerPic + "&sz=w1200";
     } else {
+        // Remove pic if it was showing
+        let oldPic = document.getElementById('omer-pic');
+        if (oldPic) oldPic.remove();
         $('O2').innerText = defaultSummerMsg || ""; 
         $('O_BECHINA').style.display = 'none'; 
         if (defaultSummerMsg) fitExpand($('O2'), 4.0, 5.0);
@@ -799,6 +813,7 @@ function loadData() {
         try { localStorage.setItem('bayswater_cache', JSON.stringify(d)); } catch(e) {}
         schedule = d.schedule;
         defaultSummerMsg = d.defaultMsg || "";
+        omerPic = d.omerPic || "";
         p1Images = d.p1List || [];
         shabbosPic = d.shabbosPic || "";
         if (p1Images.length > 0 && !p1RotateTimer) {
