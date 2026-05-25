@@ -303,7 +303,7 @@
 const $ = id => document.getElementById(id);
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjNSAvH290v-6SFkXHJfFHAr8Kh4UlmZxAIQf7-PFFFHWTNOkYDGTggyPz130gG6_Low/exec";
 
-var schedule = {}, moladList = [], p1Images = [], p1Index = 0, shabbosPic = "";
+var schedule = {}, moladList = [], p1Images = [], p1Index = 0, shabbosPic = "", p1Rotation = true, activeImageId = "";
 var p1RotateTimer = null, isShabbosImageActive = false;
 var currentlyHighlightedId = null, currentStatusHTML = "", lastDateIso = "";
 var defaultSummerMsg = "", omerPic = "";
@@ -488,6 +488,15 @@ function loadWeather() {
 
 function rotateP1() {
     if (p1Images.length === 0 || isShabbosImageActive) return;
+    // If rotation is off, show only the active image
+    if (!p1Rotation) {
+        const id = activeImageId || (p1Images.length > 0 ? p1Images[0] : "");
+        if (id) {
+            $('p1').style.opacity = 0;
+            setTimeout(() => { $('p1').src = "https://drive.google.com/thumbnail?id=" + id + "&sz=w1200"; $('p1').style.opacity = 1; }, 800);
+        }
+        return;
+    }
     $('p1').style.opacity = 0;
     setTimeout(() => {
         $('p1').src = "https://drive.google.com/thumbnail?id=" + p1Images[p1Index] + "&sz=w1200";
@@ -814,9 +823,15 @@ function loadData() {
         schedule = d.schedule;
         defaultSummerMsg = d.defaultMsg || "";
         omerPic = d.omerPic || "";
-        p1Images = d.p1List || [];
-        shabbosPic = d.shabbosPic || "";
-        if (p1Images.length > 0 && !p1RotateTimer) {
+        p1Images    = d.p1List || [];
+        shabbosPic  = d.shabbosPic || "";
+        p1Rotation  = d.p1Rotation !== false;
+        activeImageId = d.activeImageId || "";
+        // If rotation off, clear timer and show single image
+        if (!p1Rotation) {
+            if (p1RotateTimer) { clearInterval(p1RotateTimer); p1RotateTimer = null; }
+            if (!isShabbosImageActive) rotateP1();
+        } else if (p1Images.length > 0 && !p1RotateTimer) {
             rotateP1();
             p1RotateTimer = setInterval(rotateP1, 15000);
         }
