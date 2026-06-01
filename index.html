@@ -806,7 +806,14 @@ function setDataBox(id, text, showHeader) {
     } else {
         titleEl.classList.add('text-hidden');
     }
-    contentEl.textContent = text;
+    // Render [[(...)]] as highlighted time spans
+    const html = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>')
+        .replace(/\[\[\((.+?)\)\]\]/g, '<span style="color:#7a5e2a;font-weight:700;">$1</span>');
+    contentEl.innerHTML = html;
     fit(contentEl, 3.2);
 }
 
