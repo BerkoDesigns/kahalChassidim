@@ -191,7 +191,7 @@
     flex: 1; display: flex; align-items: center; justify-content: center;
     padding: 4px 6px; overflow: hidden;
   }
-  .data-box span { font-weight: 400; font-size: 3.2vh; line-height: 1.3; display: block; width: 100%; word-wrap: break-word; color: var(--text); text-align: center; }
+  .data-box span { font-weight: 400; font-size: 3.2vh; line-height: 1.3; display: block; width: 100%; word-wrap: break-word; white-space: pre-wrap; color: var(--text); text-align: center; }
   .img-box {
     flex: 1.5; border: 2px solid var(--gold); border-radius: 10px;
     background: var(--box2); overflow: hidden; position: relative;
@@ -806,14 +806,7 @@ function setDataBox(id, text, showHeader) {
     } else {
         titleEl.classList.add('text-hidden');
     }
-    // Escape HTML, preserve newlines, highlight times
-    const html = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\[\[\((.+?)\)\]\]/g, '<span style="color:#7a5e2a;font-weight:700;">$1</span>')
-        .replace(/\n/g, '<br>');
-    contentEl.innerHTML = html;
+    contentEl.textContent = text;
     fit(contentEl, 3.2);
 }
 
