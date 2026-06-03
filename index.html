@@ -936,11 +936,10 @@ function updateFsBtn() {
   if (btn) btn.style.display = document.fullscreenElement ? 'none' : '';
 }
 </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
-<script>
-// Replace this with your actual Webhook URL from Step 2
 const WEBHOOK_URL = "https://hook.us2.make.com/ijc6xvez7qvqex9v8gxir9bdutbxwlu8"; 
 
 let lastSentKey = "";
@@ -951,7 +950,7 @@ function checkAndCapture(force = false) {
     const todayStr = now.toDateString();
     const currentKey = `${todayStr}_${hour}`;
 
-    // Target hours: 9 AM (9) and 5 PM (17) OR if we are forcing a initial test load
+    // Target hours: 9 AM (9) and 5 PM (17) OR if we are forcing an initial test load
     if (force || ((hour === 9 || hour === 17) && lastSentKey !== currentKey)) {
         if (!force) {
             lastSentKey = currentKey; // Prevents double-sending during the same hour
