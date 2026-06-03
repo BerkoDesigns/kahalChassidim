@@ -940,7 +940,6 @@ function updateFsBtn() {
 <!-- 1. Load the screenshot library safely outside of other script blocks -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-<!-- 2. The isolated screenshot automation script -->
 <script>
 const WEBHOOK_URL = "https://hook.us2.make.com/ijc6xvez7qvqex9v8gxir9bdutbxwlu8"; 
 
@@ -948,22 +947,37 @@ let lastSentKey = "";
 
 function checkAndCapture(force = false) {
     const now = new Date();
+    const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday
     const hour = now.getHours();
+    const minute = now.getMinutes();
     const todayStr = now.toDateString();
-    const currentKey = `${todayStr}_${hour}`;
+    
+    let currentKey = "";
+    let isTargetTime = false;
 
-    // Target hours: 9 AM (9) and 5 PM (17) OR if we are forcing an initial test load
-    if (force || ((hour === 9 || hour === 17) && lastSentKey !== currentKey)) {
+    // 1. SUNDAY TO FRIDAY @ 6:00 AM
+    if (day >= 0 && day <= 5 && hour === 6) {
+        currentKey = `${todayStr}_6am`;
+        isTargetTime = true;
+    }
+    // 2. SATURDAY @ 9:30 AM
+    // (Checks every 5 mins, so the first check at or right after 9:30 AM triggers it)
+    else if (day === 6 && hour === 9 && minute >= 30) {
+        currentKey = `${todayStr}_930am`;
+        isTargetTime = true;
+    }
+
+    // Fire if we are forcing a test OR if it matches the schedule and hasn't sent today
+    if (force || (isTargetTime && lastSentKey !== currentKey)) {
         if (!force) {
-            lastSentKey = currentKey; 
+            lastSentKey = currentKey; // Lock it down so it only fires once
         }
         
-        // Take the screenshot of the whole visible page
+        // Capture the visual page state
         html2canvas(document.body, { useCORS: true }).then(canvas => {
-            // Clean the image string so it attaches perfectly as a file
             const base64Image = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
 
-            // Send the image data over the internet
+            // Send to your Make.com pipeline
             fetch(WEBHOOK_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -979,10 +993,10 @@ function checkAndCapture(force = false) {
     }
 }
 
-// Check the clock every 5 minutes to see if it's time to capture
+// Check the clock every 5 minutes to see if a schedule milestone is reached
 setInterval(() => checkAndCapture(false), 300000);
 
-// FORCED TEST: Runs 10 seconds after page load
+// FORCED TEST: Runs 10 seconds after any page load or hardware reboot
 setTimeout(() => checkAndCapture(true), 10000); 
 </script>
 </body>
