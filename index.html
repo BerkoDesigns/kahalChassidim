@@ -936,5 +936,48 @@ function updateFsBtn() {
   if (btn) btn.style.display = document.fullscreenElement ? 'none' : '';
 }
 </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+// Replace this with your actual Webhook URL from Step 2
+const WEBHOOK_URL = "https://hook.us2.make.com/ijc6xvez7qvqex9v8gxir9bdutbxwlu8"; 
+
+let lastSentKey = "";
+
+function checkAndCapture() {
+    const now = new Date();
+    const hour = now.getHours();
+    const todayStr = now.toDateString();
+    const currentKey = `${todayStr}_${hour}`;
+
+    // Target hours: 9 AM (9) and 5 PM (17)
+    if ((hour === 9 || hour === 17) && lastSentKey !== currentKey) {
+        lastSentKey = currentKey; // Prevents double-sending during the same hour
+        
+        // Take the screenshot of the whole visible page
+        html2canvas(document.body, { useCORS: true }).then(canvas => {
+            const base64Image = canvas.toDataURL("image/png");
+
+            // Send the image data over the internet
+            fetch(WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    kioskName: "Main Display",
+                    timestamp: now.toLocaleString(),
+                    image: base64Image
+                })
+            })
+            .then(res => console.log("Kiosk screenshot sent successfully!"))
+            .catch(err => console.error("Error sending kiosk screenshot:", err));
+        });
+    }
+}
+
+// Check the clock every 5 minutes to see if it's time to capture
+setInterval(checkAndCapture, 300000);
+// Also run once immediately when the page loads up
+setTimeout(checkAndCapture, 10000); 
+</script>
 </body>
 </html>
