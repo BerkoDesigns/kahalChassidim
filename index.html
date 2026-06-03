@@ -937,8 +937,10 @@ function updateFsBtn() {
 }
 </script>
 
+<!-- 1. Load the screenshot library safely outside of other script blocks -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+<!-- 2. The isolated screenshot automation script -->
 <script>
 const WEBHOOK_URL = "https://hook.us2.make.com/ijc6xvez7qvqex9v8gxir9bdutbxwlu8"; 
 
@@ -953,12 +955,13 @@ function checkAndCapture(force = false) {
     // Target hours: 9 AM (9) and 5 PM (17) OR if we are forcing an initial test load
     if (force || ((hour === 9 || hour === 17) && lastSentKey !== currentKey)) {
         if (!force) {
-            lastSentKey = currentKey; // Prevents double-sending during the same hour
+            lastSentKey = currentKey; 
         }
         
         // Take the screenshot of the whole visible page
         html2canvas(document.body, { useCORS: true }).then(canvas => {
-            const base64Image = canvas.toDataURL("image/png");
+            // Clean the image string so it attaches perfectly as a file
+            const base64Image = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
 
             // Send the image data over the internet
             fetch(WEBHOOK_URL, {
@@ -979,7 +982,7 @@ function checkAndCapture(force = false) {
 // Check the clock every 5 minutes to see if it's time to capture
 setInterval(() => checkAndCapture(false), 300000);
 
-// FORCED TEST: This runs once 10 seconds after page load and forces a send for Make.com to map it
+// FORCED TEST: Runs 10 seconds after page load
 setTimeout(() => checkAndCapture(true), 10000); 
 </script>
 </body>
