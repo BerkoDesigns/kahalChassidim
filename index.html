@@ -485,7 +485,7 @@ function updateP1Image(isKodesh) {
         if (shabbosPic) {
             $('p1').style.opacity = 0;
             setTimeout(() => { 
-                $('p1').src = "https://drive.google.com/thumbnail?id=" + shabbosPic + "&sz=w1200"; 
+                $('p1').src = "https://lh3.googleusercontent.com/d/" + shabbosPic + "=w1200";
                 $('p1').style.opacity = 1; 
             }, 800);
         } else {
@@ -526,13 +526,13 @@ function rotateP1() {
         const id = activeImageId || (p1Images.length > 0 ? p1Images[0] : "");
         if (id) {
             $('p1').style.opacity = 0;
-            setTimeout(() => { $('p1').src = "https://drive.google.com/thumbnail?id=" + id + "&sz=w1200"; $('p1').style.opacity = 1; }, 800);
+            setTimeout(() => { $('p1').src = "https://lh3.googleusercontent.com/d/" + id + "=w1200"; $('p1').style.opacity = 1; }, 800);
         }
         return;
     }
     $('p1').style.opacity = 0;
     setTimeout(() => {
-        $('p1').src = "https://drive.google.com/thumbnail?id=" + p1Images[p1Index] + "&sz=w1200";
+        $('p1').src = "https://lh3.googleusercontent.com/d/" + p1Images[p1Index] + "=w1200";
         $('p1').style.opacity = 1;
         p1Index = (p1Index + 1) % p1Images.length;
     }, 800);
@@ -649,7 +649,7 @@ function updateUI() {
             img.id = 'omer-pic';
             omerBox.appendChild(img);
         }
-        document.getElementById('omer-pic').src = "https://drive.google.com/thumbnail?id=" + omerPic + "&sz=w1200";
+        document.getElementById('omer-pic').src = "https://lh3.googleusercontent.com/d/" + omerPic + "=w1200";
     } else {
         // Remove pic if it was showing
         let oldPic = document.getElementById('omer-pic');
@@ -877,8 +877,8 @@ function loadData() {
         }
         setDataBox('ANN', d.announcements || "", d.annHeader !== false);
         setDataBox('TEF', d.tefila || "", d.tefHeader !== false);
-        if (d.p4) $('p4').src = "https://drive.google.com/thumbnail?id=" + d.p4 + "&sz=w1200";
-        if (d.p5) $('p5').src = "https://drive.google.com/thumbnail?id=" + d.p5 + "&sz=w1200";
+        if (d.p4) $('p4').src = "https://lh3.googleusercontent.com/d/" + d.p4 + "=w1200";
+        if (d.p5) $('p5').src = "https://lh3.googleusercontent.com/d/" + d.p5 + "=w1200";
         moladList = [];
         if (d.moladList && Array.isArray(d.moladList)) {
             for (let entry of d.moladList) { 
