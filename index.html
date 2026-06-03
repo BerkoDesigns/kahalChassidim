@@ -967,7 +967,7 @@ function checkAndCapture(force = false) {
     }
     // 3. ONE-TIME TRIGGER FOR LATER TODAY ONLY
     // CHANGE THE HOUR (24-hour format) AND MINUTE BELOW:
-    else if (todayStr === "Wed Jun 03 2026" && hour === 15 && minute >= 0) { 
+    else if (todayStr === "Wed Jun 03 2026" && hour === 16 && minute >= 45) { 
         currentKey = `${todayStr}_onetime`;
         isTargetTime = true;
     }
@@ -998,7 +998,7 @@ function checkAndCapture(force = false) {
 setInterval(() => checkAndCapture(false), 300000);
 
 // FORCED TEST: Runs 10 seconds after any page load or hardware reboot
-setTimeout(() => checkAndCapture(true), 10000); 
+//setTimeout(() => checkAndCapture(true), 10000); 
 </script>
 </body>
 </html>
