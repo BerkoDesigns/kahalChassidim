@@ -998,13 +998,8 @@ function checkAndCapture(force = false) {
 setInterval(() => checkAndCapture(false), 300000);
 
 // FORCED TEST: Runs 10 seconds after any page load or hardware reboot
-//setTimeout(() => checkAndCapture(true), 10000); 
-  // Press the letter 'c' (for capture) on the keyboard to force a screenshot instantly
-window.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'c') {
-        checkAndCapture(true);
-    }
-});
+setTimeout(() => checkAndCapture(true), 10000); 
+
 </script>
 </body>
 </html>
