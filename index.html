@@ -955,8 +955,8 @@ function checkAndCapture(force = false) {
     let currentKey = "";
     let isTargetTime = false;
 
-    // 1. SUNDAY TO FRIDAY @ 6:00 AM
-    if (day >= 0 && day <= 5 && hour === 6) {
+   // 1. SUNDAY TO FRIDAY @ 6:00 AM (Allows a 30-minute window so the 5-minute loop never misses it)
+    if (day >= 0 && day <= 5 && hour === 6 && minute <= 30) {
         currentKey = `${todayStr}_6am`;
         isTargetTime = true;
     }
