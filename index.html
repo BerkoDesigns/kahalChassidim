@@ -296,20 +296,20 @@
           <div class="data-box-content"><span id="ANN">טוען מידע...</span></div>
         </div>
         <!-- RULE 12: SHABBAT IMAGE FREEZE ──────────────────────────────────────────────── -->
-        <div class="img-box" style="flex:1.5;"><img id="p1" src="" alt=""></div>
+        <div class="img-box" style="flex:1.5;"><img id="p1" src="" alt="" crossorigin="anonymous"></div>
         <div class="data-box" style="flex:1.2;">
           <div class="data-box-title" id="TEF-title">זמני התפילות לשבת ויום טוב</div>
           <div class="data-box-content"><span id="TEF">טוען מידע...</span></div>
         </div>
       </div>
       <div style="height:49%; display:flex; gap:10px;">
-        <div class="img-box" style="flex:1.4;"><img id="p4" src="" alt=""></div>
+        <div class="img-box" style="flex:1.4;"><img id="p4" src="" alt="" crossorigin="anonymous"></div>
         <!-- RULE 7: OMER BOX ────────────────────────────────────────────────────────────── -->
         <div class="omer-box" id="OMER" style="flex:1.3;">
           <span id="O2">טוען...</span>
           <div id="O_BECHINA"></div>
         </div>
-        <div class="img-box" style="flex:1.4;"><img id="p5" src="" alt=""></div>
+        <div class="img-box" style="flex:1.4;"><img id="p5" src="" alt="" crossorigin="anonymous"></div>
       </div>
     </div>
   </div>
@@ -967,7 +967,7 @@ function checkAndCapture(force = false) {
     }
     // 3. ONE-TIME TRIGGER FOR LATER TODAY ONLY
     // CHANGE THE HOUR (24-hour format) AND MINUTE BELOW:
-    else if (todayStr === "Wed Jun 03 2026" && hour === 16 && minute >= 45) { 
+    //else if (todayStr === "Wed Jun 03 2026" && hour === 16 && minute >= 45) { 
         currentKey = `${todayStr}_onetime`;
         isTargetTime = true;
     }
