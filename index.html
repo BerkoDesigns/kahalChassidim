@@ -291,15 +291,15 @@
 
     <div class="content-col">
       <div style="height:49%; display:flex; gap:10px;">
-        <div class="data-box" style="flex:1.2;">
-          <div class="data-box-title" id="ANN-title">זמנים התפילה בימי חול</div>
-          <div class="data-box-content"><span id="ANN">טוען מידע...</span></div>
+       <div class="data-box" style="flex:1.2;">
+  <div class="data-box-title" id="TEF-title">זמני התפילות לשבת ויום טוב</div>
+  <div class="data-box-content"><span id="TEF">טוען מידע...</span></div>
         </div>
         <!-- RULE 12: SHABBAT IMAGE FREEZE ──────────────────────────────────────────────── -->
         <div class="img-box" style="flex:1.5;"><img id="p1" src="" alt="" crossorigin="anonymous"></div>
-        <div class="data-box" style="flex:1.2;">
-          <div class="data-box-title" id="TEF-title">זמני התפילות לשבת ויום טוב</div>
-          <div class="data-box-content"><span id="TEF">טוען מידע...</span></div>
+       <div class="data-box" style="flex:1.2;">
+  <div class="data-box-title" id="ANN-title">זמנים התפילה בימי חול</div>
+  <div class="data-box-content"><span id="ANN">טוען מידע...</span></div>
         </div>
       </div>
       <div style="height:49%; display:flex; gap:10px;">
@@ -817,7 +817,14 @@ function updateUI() {
 
     // RULE 12: Image freeze
     updateP1Image(isKodesh);
-
+// Dynamic TEF title
+const tefTitle = $('TEF-title');
+if (tefTitle) {
+    if (isShab && isYomTov) tefTitle.textContent = 'זמני התפילות לשבת ויום טוב';
+    else if (isYomTov)      tefTitle.textContent = 'זמני התפילות ליום טוב';
+    else if (isShab)        tefTitle.textContent = 'זמני התפילות לשבת';
+    else                    tefTitle.textContent = 'זמני התפילות לשבת ויום טוב';
+}
     // Active zman highlight
     let zT = []; 
     for (let i=1; i<=11; i++) zT.push({id:'r'+i, sec: getSec(dDate.z[i-1], i>=7)});
