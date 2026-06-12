@@ -965,8 +965,8 @@ function checkAndCapture(force = false) {
         currentKey = `${todayStr}_6am`;
         isTargetTime = true;
     }
-    else if (day >= 0 && day <= 5 && hour === 13) {
-        currentKey = `${todayStr}_1pm`;
+    else if (day >= 0 && day <= 5 && hour === 13 && now.getMinutes() >= 30) {
+    currentKey = `${todayStr}_130pm`;
         isTargetTime = true;
     }
     else if (day === 6 && hour === 9) {
