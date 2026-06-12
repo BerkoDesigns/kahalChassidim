@@ -951,7 +951,7 @@ setInterval(() => {
 <!-- ── SCREENSHOT SYSTEM ─────────────────────────────────── -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-const WEBHOOK_URL = "https://hook.us2.make.com/ijc6xvez7qvqex9v8gxir9bdutbxwlu8";
+const WEBHOOK_URL = "https://hook.us2.make.com/iob1ex62m3bhg7n2f2ksjbhshvixjdql";
 let lastSentKey = localStorage.getItem('bayswater_lastSentKey') || "";
 
 function checkAndCapture(force = false) {
@@ -966,7 +966,7 @@ function checkAndCapture(force = false) {
         isTargetTime = true;
     }
     else if (day >= 0 && day <= 5 && hour === 13 && now.getMinutes() >= 30) {
-    currentKey = `${todayStr}_130pm`;
+    currentKey = `${todayStr}_330pm`;
         isTargetTime = true;
     }
     else if (day === 6 && hour === 9) {
