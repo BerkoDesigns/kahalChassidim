@@ -948,11 +948,11 @@ setInterval(() => {
     if (now.getHours() === 4 && now.getMinutes() < 5) location.reload();
 }, 60000);
 </script>
-<!-- ── SCREENSHOT SYSTEM ─────────────────────────────────── -->
+  <!-- ── SCREENSHOT SYSTEM ─────────────────────────────────── -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-const WEBHOOK_URL = "https://hook.us2.make.com/iob1ex62m3bhg7n2f2ksjbhshvixjdql";
-let lastSentKey = localStorage.getItem('bayswater_lastSentKey') || "";
+const WEBHOOK_URL = "https://hook.us2.make.com/ijc6xvez7qvqex9v8gxir9bdutbxwlu8";
+let lastSentKey = "";
 
 function checkAndCapture(force = false) {
     const now = new Date();
@@ -965,20 +965,13 @@ function checkAndCapture(force = false) {
         currentKey = `${todayStr}_6am`;
         isTargetTime = true;
     }
-    else if (day >= 0 && day <= 5 && hour === 13 && now.getMinutes() >= 30) {
-    currentKey = `${todayStr}_330pm`;
-        isTargetTime = true;
-    }
     else if (day === 6 && hour === 9) {
-        currentKey = `${todayStr}_9am`;
+              currentKey = `${todayStr}_930am`;
         isTargetTime = true;
     }
 
     if (force || (isTargetTime && lastSentKey !== currentKey)) {
-        if (!force) {
-            lastSentKey = currentKey;
-            localStorage.setItem('bayswater_lastSentKey', currentKey);
-        }
+              if (!force) lastSentKey = currentKey;
         html2canvas(document.body, { useCORS: true, allowTaint: false }).then(canvas => {
             const base64Image = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
             fetch(WEBHOOK_URL, {
@@ -996,10 +989,9 @@ function checkAndCapture(force = false) {
     }
 }
 
-setInterval(() => checkAndCapture(false), 60000);
-// Uncomment to test immediately on page load, then re-comment:
-//setTimeout(() => checkAndCapture(true), 5000);
+setInterval(() => checkAndCapture(false), 300000);
+// Remove the line below after confirming screenshot delivery works:
+// setTimeout(() => checkAndCapture(true), 5000);
 </script>
 </body>
 </html>
-
