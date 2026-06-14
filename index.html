@@ -618,6 +618,8 @@ function updateUI() {
         fitExpand($('O2'), 3.0, 4.5);  // Much smaller max for Shavuot
     } else if (isMoledDisplay) {
         // Format molad: split "מולד חודש [month]:" from details
+      let oldPic = document.getElementById('omer-pic');
+    if (oldPic) oldPic.remove();
         let moledFormatted = moledText;
         if (moledText.includes("מולד חודש")) {
             let colonIndex = moledText.indexOf(":");
