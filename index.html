@@ -691,17 +691,22 @@ function updateUI() {
     let head = "", sub = "", cls = "gold-box";
     
     // HIGHEST PRIORITY: ROSH CHODESH (any day of week, any time)
-    if (showRochChodesh) {
-        head = tomorrowIsRochChodesh && !hText.includes("ראש חודש") ? (dTomorrowRoch.holidayText || "ראש חודש") : hText;
-        sub = "הלל, יעלה ויבא";
+    if (showRochChodesh && !isShab) {
+    // Weekday Rosh Chodesh only
+    head = tomorrowIsRochChodesh && !hText.includes("ראש חודש") ? (dTomorrowRoch.holidayText || "ראש חודש") : hText;
+    sub = "הלל, יעלה ויבא";
+    cls = "teal-box";
+} else if (isShab) {
+    // Shabbat
+    if (isYomTov && hText) {
+        head = "שבת / " + hText;
+        sub = "";
         cls = "teal-box";
-    } else if (isShab) {
-        // Shabbat (RULE 4)
-        if (isYomTov && hText) {
-            head = "שבת / " + hText;
-            sub = "";
-            cls = "teal-box";
-        } else {
+    } else if (hText.includes("ראש חודש")) {
+        head = "שבת ראש חודש";
+        sub = "הלל, יעלה ויבא, אתה יצרת";
+        cls = "teal-box";
+    } else {
             // Check if this is Shabbat Mevarchim (look ahead for Rosh Chodesh in next 8 days)
             // OR if Col D contains "מברכים"
             let isMevarchimDay = hText && hText.includes("מברכים");
