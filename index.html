@@ -972,10 +972,7 @@ function checkAndCapture(force = false) {
         currentKey = `${todayStr}_6am`;
         isTargetTime = true;
     }
-    else if (day >= 0 && day <= 5 && hour === 12) {
-        currentKey = `${todayStr}_12pm`;
-        isTargetTime = true;
-    }
+    
     else if (day === 6 && hour === 9) {
         currentKey = `${todayStr}_930am`;
         isTargetTime = true;
