@@ -681,12 +681,13 @@ function updateUI() {
     let tR    = (schedule[statusIso] ? (schedule[statusIso].tachReason || "") : (dDate.tachReason || "") || (dToday.tachReason || "")).trim();
 
     // ראש חודש window: 20 min before RT the day before, through 20 min before RT on the day of
-    let rochCutoff = rtSecs - 1200;
-    let rochStart  = rtSecs - 1200;
-    let dTomorrowRoch = schedule[getIso(new Date(now.getTime() + 86400000))];
-    let tomorrowIsRochChodesh = dTomorrowRoch && (dTomorrowRoch.holidayText || "").includes("ראש חודש");
-    let showRochChodesh = (hText.includes("ראש חודש") && cSec < rochCutoff) ||
-                          (tomorrowIsRochChodesh && cSec >= rochStart);
+   let rochCutoff = rtSecs - 900;  // 15 min before RT
+  let todayIsRC  = (dToday.holidayText || "").includes("ראש חודש");
+  let dTomorrowRoch = schedule[getIso(new Date(now.getTime() + 86400000))];
+  let tomorrowIsRochChodesh = dTomorrowRoch && (dTomorrowRoch.holidayText || "").includes("ראש חודש");
+  let isErevRC = tomorrowIsRochChodesh && cSec >= rochCutoff && !todayIsRC;
+  let showRochChodesh = (todayIsRC && (tomorrowIsRochChodesh || cSec < rochCutoff)) ||
+                      isErevRC;
 
     let head = "", sub = "", cls = "gold-box";
     
