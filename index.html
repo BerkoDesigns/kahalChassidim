@@ -152,7 +152,16 @@
   .gold-box  { color: var(--gold-dark); background: var(--box); }
   #status-head { font-size: 6.2vh; line-height: 1.0; display: block; width: 100%; }
   #status-sub  { font-size: 3.2vh; color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
-  #status-kl   { font-size: 3.0vh; color: #1a7a50; display: block; width: 100%; line-height: 1.0; }
+  #status-kl {
+    display: inline-block; background: #F5F0E8;
+    border: 3px solid #c0392b; border-radius: 10px;
+    padding: 4px 16px; margin-top: 4px;
+  }
+  #status-kl-text {
+    font-size: 4.0vh; color: #ffffff; font-weight: 800;
+    background: #c0392b; border-radius: 6px;
+    padding: 2px 12px; display: inline-block;
+  }
   .main-body { height: 70vh; display: flex; gap: 10px; overflow: hidden; }
   .zemanim-col {
     width: 23vw; border: 2px solid var(--gold); border-radius: 10px;
@@ -811,7 +820,7 @@ function updateUI() {
 
     // RULE 10: KIDDUSH LEVANA
     let showKL = getKiddushLevana(now, dDate.heb || "", isShab, hText, dayW);
-    let klLine = showKL ? `<span id="status-kl">קידוש לבנה</span>` : "";
+    let klLine = showKL ? `<span id="status-kl"><span id="status-kl-text">קידוש לבנה</span></span>` : "";
     let hasExtra = sub || showKL;
     let headSize = hasExtra ? 6.2 : 8.5;
     let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}"><span id="status-head" style="font-size:${headSize}vh">${head}</span>${sub ? `<span id="status-sub">${sub}</span>` : ''}${klLine}</div>`;
@@ -820,7 +829,7 @@ function updateUI() {
         currentStatusHTML = sH;
         fit(document.getElementById('status-head'), headSize);
         if (sub) fit(document.getElementById('status-sub'), 3.2);
-        if (showKL) fit(document.getElementById('status-kl'), 3.0);
+        if (showKL) fit(document.getElementById('status-kl-text'), 4.0);
     }
 
     // RULE 12: Image freeze
@@ -1005,3 +1014,4 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
+
