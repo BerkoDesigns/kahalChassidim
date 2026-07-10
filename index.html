@@ -638,6 +638,9 @@ function updateUI() {
                 moledFormatted = header + "\n" + details;
             }
         }
+        // Strip the arrow, then put ◈ on its own line as a divider between Yiddish and English
+        moledFormatted = moledFormatted.replace(/\s*>\s*/g, " ");
+        moledFormatted = moledFormatted.replace(/\s*◈\s*/g, "\n◈\n");
         $('O2').innerText = moledFormatted; 
         $('O_BECHINA').style.display = 'none'; 
         fitExpand($('O2'), 3.0, 4.5);  // Much smaller max for molad
@@ -1014,4 +1017,3 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
-
