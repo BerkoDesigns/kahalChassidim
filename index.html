@@ -695,7 +695,7 @@ function updateUI() {
     // ראש חודש window: 20 min before RT the day before, through 20 min before RT on the day of
    let rochCutoff = rtSecs - 900;  // 15 min before RT
   let todayIsRC  = (dToday.holidayText || "").includes("ראש חודש");
-  let dTomorrowRoch = schedule[getIso(new Date(now.getTime() + 86400000))];
+  let dTomorrowRoch = schedule[getIso(new Date(new Date(dIso).getTime() + 86400000))];
   let tomorrowIsRochChodesh = dTomorrowRoch && (dTomorrowRoch.holidayText || "").includes("ראש חודש");
   let isErevRC = tomorrowIsRochChodesh && cSec >= rochCutoff && !todayIsRC;
   let showRochChodesh = (todayIsRC && (tomorrowIsRochChodesh || cSec < rochCutoff)) ||
@@ -706,7 +706,9 @@ function updateUI() {
     // HIGHEST PRIORITY: ROSH CHODESH (any day of week, any time)
     if (showRochChodesh && !isShab) {
     // Weekday Rosh Chodesh only
-    head = tomorrowIsRochChodesh && !hText.includes("ראש חודש") ? (dTomorrowRoch.holidayText || "ראש חודש") : hText;
+    head = hText.includes("ראש חודש") ? hText :
+           (dToday.holidayText && dToday.holidayText.includes("ראש חודש")) ? dToday.holidayText :
+           tomorrowIsRochChodesh ? (dTomorrowRoch.holidayText || "ראש חודש") : "ראש חודש";
     sub = "הלל, יעלה ויבא";
     cls = "teal-box";
 } else if (isShab) {
@@ -1017,3 +1019,4 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
+
