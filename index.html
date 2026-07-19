@@ -464,10 +464,14 @@ function isEsseraBTevet(hebDate) {
 }
 
 // RULE 10: KIDDUSH LEVANA
-function getKiddushLevana(now, hebDate, isShab, holidayText, dayOfWeek) {
+function getKiddushLevana(now, hebDate, isShab, holidayText, dayOfWeek, cSec, alosSec) {
     if (isShab) return false;
     if (dayOfWeek === 5) return false;
     if (isNineDays(hebDate)) return false;
+    // On Tisha B'Av (9 Av), only show KL from Alos onwards
+    if (hebDate.startsWith("ט׳") && hebDate.includes("אב")) {
+        if (cSec < alosSec) return false;
+    }
     let nowMs = now.getTime(), bestMolad = null;
     for (let mol of moladList) {
         if (mol && mol.getTime() <= nowMs && (!bestMolad || mol.getTime() > bestMolad.getTime()))
@@ -480,7 +484,7 @@ function getKiddushLevana(now, hebDate, isShab, holidayText, dayOfWeek) {
 
 function isNineDays(hebDate) {
     if (!hebDate || !hebDate.includes("אב")) return false;
-    for (let d of ["א'","ב'","ג'","ד'","ה'","ו'","ז'","ח'","ט'"]) {
+    for (let d of ["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ז׳","ח׳"]) {
         if (hebDate.startsWith(d)) return true;
     }
     return false;
@@ -824,7 +828,7 @@ function updateUI() {
     }
 
     // RULE 10: KIDDUSH LEVANA
-    let showKL = getKiddushLevana(now, dDate.heb || "", isShab, hText, dayW);
+    let showKL = getKiddushLevana(now, dDate.heb || "", isShab, hText, dayW, cSec, getSec(dToday.z[0], false));
     let klLine = showKL ? `<span id="status-kl"><span id="status-kl-text">קידוש לבנה</span></span>` : "";
     let hasExtra = sub || showKL;
     let headSize = hasExtra ? 6.2 : 8.5;
@@ -1019,4 +1023,5 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
+
 
