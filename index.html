@@ -696,26 +696,9 @@ function updateUI() {
     let hText = (schedule[statusIso] ? (schedule[statusIso].holidayText || "") : (dDate.holidayText || "")).trim();
     let tR    = (schedule[statusIso] ? (schedule[statusIso].tachReason || "") : (dDate.tachReason || "") || (dToday.tachReason || "")).trim();
 
-    // ראש חודש window: 20 min before RT the day before, through 20 min before RT on the day of
-   let rochCutoff = rtSecs - 900;  // 15 min before RT
-  let todayIsRC  = (dToday.holidayText || "").includes("ראש חודש");
-  let dTomorrowRoch = schedule[getIso(new Date(new Date(dIso).getTime() + 86400000))];
-  let tomorrowIsRochChodesh = dTomorrowRoch && (dTomorrowRoch.holidayText || "").includes("ראש חודש");
-  let isErevRC = tomorrowIsRochChodesh && cSec >= rochCutoff && !todayIsRC;
-  let showRochChodesh = (todayIsRC && (tomorrowIsRochChodesh || cSec < rochCutoff)) ||
-                      isErevRC;
-
     let head = "", sub = "", cls = "gold-box";
     
-    // HIGHEST PRIORITY: ROSH CHODESH (any day of week, any time)
-    if (showRochChodesh && !isShab) {
-    // Weekday Rosh Chodesh only
-    head = hText.includes("ראש חודש") ? hText :
-           (dToday.holidayText && dToday.holidayText.includes("ראש חודש")) ? dToday.holidayText :
-           tomorrowIsRochChodesh ? (dTomorrowRoch.holidayText || "ראש חודש") : "ראש חודש";
-    sub = "הלל, יעלה ויבא";
-    cls = "teal-box";
-} else if (isShab) {
+    if (isShab) {
     // Shabbat
     if (isYomTov && hText) {
         head = "שבת / " + hText;
@@ -796,34 +779,51 @@ function updateUI() {
             sub = tR; 
             cls = "teal-box";
         }
-    } else if (hText !== "" && !isPastRT) {
-        // Holiday text before RT (RULE 4, RULE 8) - but NOT Rosh Chodesh (already caught above)
-        head = hText; 
-        sub = tR; 
-        cls = "teal-box";
-    } else if (tR !== "" && !isPastRT) {
-        // Tachanun override (RULE 4)
-        head = "אין אומרים תחנון"; 
-        sub = tR; 
-        cls = "teal-box";
     } else {
-        // Check yesterday for Motzei Yom Tov after midnight (RULE 4)
-        let dYesterday = schedule[getIso(new Date(now.getTime() - 86400000))];
-        let yesterdayWasYomTov = dYesterday && (dYesterday.yomtov === "Y");
-        
-        if (yesterdayWasYomTov && cSec < getSec(dToday.z[0], false)) {
-            head = "מוצאי יום טוב"; 
-            sub = "אתה חוננתנו"; 
-            cls = "gold-box";
-        } else if (dayW === 5 && !isYomTov && !isEsseraBTevet(dToday.heb) && !isPastRT) {
-            // RULE 13: FRIDAY TACHANUN
+        // Rosh Chodesh: starts 25min before RT the evening before, ends 25min before RT on last day
+        // Matches Chesed V'Emes logic exactly
+        let rochCutoff = rtSecs - 1500; // 25 min before RT
+        let todayIsRC      = hText.includes("ראש חודש");
+        let civilTodayIsRC = (dToday.holidayText || "").includes("ראש חודש");
+        let onRCDay        = todayIsRC || civilTodayIsRC;
+        let rcHeadText     = todayIsRC ? hText : (dToday.holidayText || "ראש חודש");
+        let dTomorrow      = schedule[getIso(new Date(new Date(dIso).getTime() + 86400000))];
+        let tomorrowIsRC   = dTomorrow && (dTomorrow.holidayText || "").includes("ראש חודש");
+        let isErevRC       = tomorrowIsRC && cSec >= rochCutoff && !onRCDay;
+
+        if (isErevRC) {
+            head = dTomorrow.holidayText; sub = "הלל, יעלה ויבא"; cls = "teal-box";
+        } else if (onRCDay && cSec < rochCutoff) {
+            head = rcHeadText; sub = "הלל, יעלה ויבא"; cls = "teal-box";
+        } else if (hText !== "" && !isPastRT) {
+            // Holiday text before RT (RULE 4, RULE 8) - but NOT Rosh Chodesh (already caught above)
+            head = hText; 
+            sub = tR; 
+            cls = "teal-box";
+        } else if (tR !== "" && !isPastRT) {
+            // Tachanun override (RULE 4)
             head = "אין אומרים תחנון"; 
-            sub = "ערב שבת קודש"; 
+            sub = tR; 
             cls = "teal-box";
         } else {
-            // DEFAULT
-            head = "מוריד הטל"; 
-            sub = "ותן ברכה";
+            // Check yesterday for Motzei Yom Tov after midnight (RULE 4)
+            let dYesterday = schedule[getIso(new Date(now.getTime() - 86400000))];
+            let yesterdayWasYomTov = dYesterday && (dYesterday.yomtov === "Y");
+            
+            if (yesterdayWasYomTov && cSec < getSec(dToday.z[0], false)) {
+                head = "מוצאי יום טוב"; 
+                sub = "אתה חוננתנו"; 
+                cls = "gold-box";
+            } else if (dayW === 5 && !isYomTov && !isEsseraBTevet(dToday.heb) && !isPastRT) {
+                // RULE 13: FRIDAY TACHANUN
+                head = "אין אומרים תחנון"; 
+                sub = "ערב שבת קודש"; 
+                cls = "teal-box";
+            } else {
+                // DEFAULT
+                head = "מוריד הטל"; 
+                sub = "ותן ברכה";
+            }
         }
     }
 
@@ -1023,5 +1023,6 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
+
 
 
