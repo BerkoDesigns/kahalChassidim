@@ -738,10 +738,15 @@ function updateUI() {
                 head = "שבת מברכים";
                 sub = rochDisplay || "";
                 cls = "teal-box";
+            } else if (hText !== "") {
+                // Special Shabbos name (e.g. שבת נחמו) - promote to headline, matching Chesed V'Emes
+                head = hText;
+                sub = "";
+                cls = "teal-box";
             } else {
                 // Regular Shabbat
                 head = "שבת קודש";
-                sub = hText;
+                sub = "";
             }
         }
     } else if (isMotz) {
@@ -1023,6 +1028,7 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
+
 
 
 
