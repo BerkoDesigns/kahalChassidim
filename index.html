@@ -591,7 +591,7 @@ function updateUI() {
 
     // RULE 2 & 3: Flip logic
     let rtSecs = getSec(dToday.z[10], true) + 120;
-    let oIso   = (cSec >= rtSecs - 1500) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
+    let oIso   = (cSec >= rtSecs - 1500) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now); // 25 min before RT
     let dIso   = (cSec < getSec(dToday.z[0], false)) ? getIso(new Date(now.getTime() - 86400000)) : getIso(now);
     let dOmer  = schedule[oIso] || dToday;
     let dDate  = schedule[dIso] || dToday;
@@ -685,7 +685,17 @@ function updateUI() {
     let isYomTov  = (dToday.yomtov === "Y");
     let isKodesh  = isShab || isYomTov;
     let isMotz   = (dayW===6 && cSec >= rtSecs) || (dayW===0 && cSec < THREE_AM);
-    let isPastRT = (cSec >= rtSecs);
+    // isPastRT: cSec resets to a small number right after midnight, while
+    // rtSecs is last night's evening RT — a naive cSec >= rtSecs check would
+    // wrongly stay "before RT" for the rest of the night. RT always happens
+    // well before midnight, so once we're in the post-midnight/pre-Alos
+    // continuation of last night (the same boundary dIso already uses), RT
+    // has necessarily already passed.
+    let isPastRT = (cSec >= rtSecs) || (cSec < getSec(dToday.z[0], false));
+    // Tachanun-specific: disappears 20 minutes before RT, not at RT itself.
+    // Only this one line uses this — Motzei Yom Tov, general holiday text,
+    // and the Friday-Tachanun line all stay on the exact-RT boundary above.
+    let isPastRTMinus25 = (cSec >= rtSecs - 1500) || (cSec < getSec(dToday.z[0], false));
     let statusIso;
     if (dayW===0 && cSec < THREE_AM) {
         statusIso = getIso(now);
@@ -805,8 +815,8 @@ function updateUI() {
             head = hText; 
             sub = tR; 
             cls = "teal-box";
-        } else if (tR !== "" && !isPastRT) {
-            // Tachanun override (RULE 4)
+        } else if (tR !== "" && !isPastRTMinus25) {
+            // Tachanun override (RULE 4) — disappears 20 min before RT
             head = "אין אומרים תחנון"; 
             sub = tR; 
             cls = "teal-box";
@@ -1028,7 +1038,3 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
-
-
-
-
