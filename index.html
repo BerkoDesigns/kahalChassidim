@@ -159,6 +159,7 @@
   }
   #status-head { font-size: 6.2vh; line-height: 1.0; display: block; width: 100%; }
   #status-sub  { font-size: 3.2vh; color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
+  .geshem-tal-text { color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
   .text-sep { width: 55%; height: 1px; background: rgba(0,0,0,0.28); margin: 1px 0; flex-shrink: 0; }
   #status-kl {
     display: inline-block; background: #F5F0E8;
@@ -350,6 +351,11 @@ var elulEveIso = null;          // 30 Av — the evening-before trigger day
 var roshHashanahIso = null;     // 1 Tishrei
 var yomKippurIso = null;        // 10 Tishrei
 var simchatTorahIso = null;     // 23 Tishrei — לדוד's end date (Bayswater)
+var shminiAtzeretIso = null;    // 22 Tishrei — Geshem season start (different day than Simchat Torah)
+var pesach1Iso = null;          // 15 Nissan — general reference (narrow-window search)
+// Geshem/Tal need their OWN pair of boundary dates — see computeGeshemTalDates.
+var geshemStartIso = null;      // most recent Shmini Atzeret at/before today
+var geshemEndIso = null;        // the Pesach 1 that follows geshemStartIso
 var selichotStartIso = null;    // the Saturday whose night Selichot begins
 var p1RotateTimer = null, isShabbosImageActive = false;
 var currentlyHighlightedId = null, currentStatusHTML = "", lastDateIso = "";
@@ -473,7 +479,7 @@ function computeSelichotStartIso(rhIso) {
 function computeSeasonDates() {
     elulTriggerDayIso = null; elulEveIso = null;
     roshHashanahIso = null; yomKippurIso = null; simchatTorahIso = null;
-    selichotStartIso = null;
+    selichotStartIso = null; shminiAtzeretIso = null; pesach1Iso = null;
     if (!schedule) return;
     let searchFloor = getIsoMinusDays(getIso(new Date()), 60);
     let isos = Object.keys(schedule).sort();
@@ -486,9 +492,66 @@ function computeSeasonDates() {
         if (!roshHashanahIso && heb.includes("תשרי") && day === 1) roshHashanahIso = iso;
         if (!yomKippurIso && heb.includes("תשרי") && day === 10) yomKippurIso = iso;
         if (!simchatTorahIso && heb.includes("תשרי") && day === 23) simchatTorahIso = iso;
+        if (!shminiAtzeretIso && heb.includes("תשרי") && day === 22) shminiAtzeretIso = iso;
+        if (!pesach1Iso && heb.includes("ניסן") && day === 15) pesach1Iso = iso;
     }
     if (elulTriggerDayIso) elulEveIso = getIsoMinusDays(elulTriggerDayIso, 1);
     if (roshHashanahIso) selichotStartIso = computeSelichotStartIso(roshHashanahIso);
+    computeGeshemTalDates();
+}
+
+// Scans the ENTIRE schedule (not a narrow window) for geshemStartIso (the
+// latest Shmini Atzeret at/before today, falling back to the earliest
+// available one if today is before all of them) and geshemEndIso (the
+// first Pesach 1 strictly after that Shmini Atzeret) — correctly paired
+// regardless of where "today" falls in the ~6-month Geshem/Tal span.
+function computeGeshemTalDates() {
+    geshemStartIso = null; geshemEndIso = null;
+    if (!schedule) return;
+    let todayIso = getIso(new Date());
+    let isos = Object.keys(schedule).sort();
+
+    let allSA = [], allPesach = [];
+    for (let iso of isos) {
+        let heb = (schedule[iso] || {}).heb || "";
+        if (heb.includes("תשרי") && extractHebDay(heb) === 22) allSA.push(iso);
+        if (heb.includes("ניסן") && extractHebDay(heb) === 15) allPesach.push(iso);
+    }
+    if (!allSA.length && !allPesach.length) return;
+
+    // Whichever boundary most recently occurred (at or before today) tells
+    // us which season we're actually in — checking Shmini Atzeret's
+    // presence alone isn't enough, since a sheet that doesn't go back far
+    // enough could be missing last year's SA even though we're clearly
+    // past a more recent Pesach (i.e. currently in Tal season).
+    let lastSA = null;     for (let iso of allSA) if (iso <= todayIso) lastSA = iso;
+    let lastPesach = null; for (let iso of allPesach) if (iso <= todayIso) lastPesach = iso;
+
+    if (lastSA && (!lastPesach || lastSA > lastPesach)) {
+        // Most recent transition was Shmini Atzeret, not yet superseded by
+        // a Pesach — we're in (or entering) Geshem season.
+        geshemStartIso = lastSA;
+        for (let iso of allPesach) { if (iso > geshemStartIso) { geshemEndIso = iso; break; } }
+    } else if (lastPesach) {
+        // Most recent transition was Pesach — we're in (or entering) Tal
+        // season. Still resolve geshemStartIso to the SA that PRECEDED this
+        // Pesach (not left null) so Pesach 1's own Mincha-Gedolah boundary
+        // check in isGeshemActive still works correctly on that exact day.
+        geshemEndIso = lastPesach;
+        for (let i = allSA.length - 1; i >= 0; i--) { if (allSA[i] < geshemEndIso) { geshemStartIso = allSA[i]; break; } }
+    } else if (lastSA) {
+        geshemStartIso = lastSA; // SA exists but no Pesach has occurred yet
+    } else {
+        // Neither boundary has occurred yet within available data — anchor
+        // to whichever comes first, so there's something to build on once
+        // that date arrives.
+        if (allSA.length && (!allPesach.length || allSA[0] <= allPesach[0])) {
+            geshemStartIso = allSA[0];
+            for (let iso of allPesach) { if (iso > geshemStartIso) { geshemEndIso = iso; break; } }
+        } else if (allPesach.length) {
+            geshemEndIso = allPesach[0];
+        }
+    }
 }
 
 // Shared "starts the evening before a target date, N minutes before RT"
@@ -510,6 +573,58 @@ function isLedavidActive(todayIso, cSecNow) {
     if (todayIso < simchatTorahIso) return true;
     if (todayIso === simchatTorahIso) return cSecNow < 43200; // midday cutoff (tentative — matches Chesed V'Emes pattern)
     return false;
+}
+
+// מוריד הגשם — always visible (every day, Shabbos/Yom Tov included), unlike
+// ותן טל ומטר/ותן ברכה which only apply on weekdays. Starts at Shmini
+// Atzeret's actual Mincha Gedolah zman, ends at 1st day Pesach's Mincha
+// Gedolah — precise Hebrew-date + zman triggers, not a civil-month guess.
+function isGeshemActive(todayIso, cSecNow) {
+    if (!geshemStartIso) return false;
+    if (todayIso < geshemStartIso) return false;
+    if (geshemEndIso && todayIso > geshemEndIso) return false;
+    if (todayIso === geshemStartIso) {
+        let entry = schedule[todayIso];
+        if (!entry || !entry.z) return false;
+        return cSecNow >= getSec(entry.z[7], true); // מנחה גדולה
+    }
+    if (geshemEndIso && todayIso === geshemEndIso) {
+        let entry = schedule[todayIso];
+        if (!entry || !entry.z) return true;
+        return cSecNow < getSec(entry.z[7], true); // still before Mincha Gedolah
+    }
+    return true; // strictly between the two boundary days
+}
+
+// מוריד הטל — Bayswater-specific (Chesed V'Emes is Ashkenaz and omits this
+// entirely rather than saying a substitute). Mirror image of isGeshemActive:
+// starts at Pesach 1's Mincha Gedolah, ends at the FOLLOWING Shmini
+// Atzeret's Mincha Gedolah — geshemEndIso only pairs one cycle forward from
+// geshemStartIso, so isTalActive needs its own upper-bound lookup rather
+// than reusing geshemStartIso (which would be the PAST Shmini Atzeret).
+function isTalActive(todayIso, cSecNow) {
+    if (!geshemEndIso) return false;
+    if (todayIso < geshemEndIso) return false;
+    // Find the next Shmini Atzeret after geshemEndIso (the actual upper bound for Tal)
+    let nextShminiAtzeretIso = null;
+    let isos = Object.keys(schedule).sort();
+    for (let iso of isos) {
+        if (iso <= geshemEndIso) continue;
+        let heb = (schedule[iso] || {}).heb || "";
+        if (heb.includes("תשרי") && extractHebDay(heb) === 22) { nextShminiAtzeretIso = iso; break; }
+    }
+    if (nextShminiAtzeretIso && todayIso > nextShminiAtzeretIso) return false;
+    if (todayIso === geshemEndIso) {
+        let entry = schedule[todayIso];
+        if (!entry || !entry.z) return false;
+        return cSecNow >= getSec(entry.z[7], true);
+    }
+    if (nextShminiAtzeretIso && todayIso === nextShminiAtzeretIso) {
+        let entry = schedule[todayIso];
+        if (!entry || !entry.z) return true;
+        return cSecNow < getSec(entry.z[7], true);
+    }
+    return true;
 }
 
 function isShofarActive(todayIso, cSecNow, dayW) {
@@ -587,12 +702,14 @@ function fitUnifiedStatusBox(container, vhStart) {
     let sub   = container.querySelector('#status-sub');
     let klText = container.querySelector('#status-kl-text');
     let pills = Array.from(container.querySelectorAll('.season-pill'));
+    let geshemTal = container.querySelector('.geshem-tal-text');
 
     function applyUnit(u) {
         if (head) head.style.fontSize = u + "vh";
         if (sub) sub.style.fontSize = (u * 0.65) + "vh";
         if (klText) klText.style.fontSize = (u * 0.55) + "vh";
         pills.forEach(p => p.style.fontSize = (u * 0.45) + "vh");
+        if (geshemTal) geshemTal.style.fontSize = (u * 0.65) + "vh";
     }
 
     let unit = vhStart;
@@ -906,6 +1023,28 @@ function updateUI() {
     let hText = (schedule[statusIso] ? (schedule[statusIso].holidayText || "") : (dDate.holidayText || "")).trim();
     let tR    = (schedule[statusIso] ? (schedule[statusIso].tachReason || "") : (dDate.tachReason || "") || (dToday.tachReason || "")).trim();
 
+    // RULE 18: Tal Umatar Season - Dec 4 - Pesach, replaces ותן ברכה
+    // (Was missing on this board entirely — mirrors Chesed V'Emes exactly.)
+    let hebStr = dDate.heb || "";
+    let isPesach1ForTal = hebStr.includes("ניסן") && extractHebDay(hebStr) === 15;
+    let chatzotSecForTal = getSec(dDate.z[6], true);
+    let pastChatzotForTal = (cSec >= chatzotSecForTal && chatzotSecForTal > 0);
+
+    let civMonthForTal = now.getMonth() + 1;
+    let civDayForTal   = now.getDate();
+    let civYearForTal  = now.getFullYear();
+
+    function isLeapYearForTal(y) { return (y%4===0 && y%100!==0) || y%400===0; }
+    let talUmatarDay = isLeapYearForTal(civYearForTal - 1) ? 5 : 4;
+
+    let isTalUmatar = false;
+    if (civMonthForTal === 12 && civDayForTal >= talUmatarDay) isTalUmatar = true;
+    else if (civMonthForTal === 1 || civMonthForTal === 2) isTalUmatar = true;
+    else if (civMonthForTal === 3) isTalUmatar = true;
+    else if (civMonthForTal === 4) isTalUmatar = true;
+    if (isPesach1ForTal && pastChatzotForTal) isTalUmatar = false;
+    if (civMonthForTal >= 5 && civMonthForTal <= 11) isTalUmatar = false;
+
     let head = "", sub = "", cls = "gold-box";
     
     if (isShab) {
@@ -1040,8 +1179,7 @@ function updateUI() {
                 cls = "teal-box";
             } else {
                 // DEFAULT
-                head = "מוריד הטל"; 
-                sub = "ותן ברכה";
+                head = isTalUmatar ? "ותן טל ומטר" : "ותן ברכה";
             }
         }
     }
@@ -1062,7 +1200,14 @@ function updateUI() {
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
         : "";
 
-    let hasExtra = sub || showKL || seasonPills.length > 0;
+    // מוריד הגשם / מוריד הטל — always visible (every day, Shabbos/Yom Tov
+    // included), independent of everything else the box shows.
+    let geshemTalText = "";
+    if (isGeshemActive(todayIsoForSeason, cSec)) geshemTalText = "מוריד הגשם";
+    else if (isTalActive(todayIsoForSeason, cSec)) geshemTalText = "מוריד הטל";
+    let geshemTalLine = geshemTalText ? `<span class="geshem-tal-text">${geshemTalText}</span>` : "";
+
+    let hasExtra = sub || showKL || seasonPills.length > 0 || geshemTalText;
     let headSize = hasExtra ? 6.2 : 8.5;
     // Build the box as a list of present blocks, joined with a thin divider
     // between each — so whether it's 2 texts (head+sub) or 3 (head+sub+pills),
@@ -1071,6 +1216,7 @@ function updateUI() {
     if (sub) statusBlocks.push(`<span id="status-sub">${sub}</span>`);
     if (klLine) statusBlocks.push(klLine);
     if (seasonLine) statusBlocks.push(seasonLine);
+    if (geshemTalLine) statusBlocks.push(geshemTalLine);
     let textSep = '<div class="text-sep"></div>';
     let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}">${statusBlocks.join(textSep)}</div>`;
     if (sH !== currentStatusHTML) {
