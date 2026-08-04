@@ -1049,7 +1049,11 @@ function updateUI() {
     let hText = (schedule[statusIso] ? (schedule[statusIso].holidayText || "") : (dDate.holidayText || "")).trim();
     let tR    = (schedule[statusIso] ? (schedule[statusIso].tachReason || "") : (dDate.tachReason || "") || (dToday.tachReason || "")).trim();
     // אסרו חג always means "no Tachanun" — no sheet entry needed at all.
-    if (!tR && hText.includes("אסרו חג")) tR = "אסרו חג";
+    // Set tR to the explicit no-Tachanun text (not "אסרו חג" itself) so it
+    // shows as a distinct, informative sub-line under the אסרו חג head,
+    // rather than duplicating the head text and getting suppressed by the
+    // anti-duplicate guard below.
+    if (!tR && hText.includes("אסרו חג")) tR = "אין אומרים תחנון";
     // Hardcoded no-Tachanun days (item 5) — independent of the sheet.
     // Skipped during Chol Hamoed since its own name is already the head.
     // No Mincha-eve extension — Bayswater never says Tachanun at Mincha.
@@ -1151,15 +1155,19 @@ function updateUI() {
             // RULE: ותודיענו ONLY when Motzei Shabbat + Tomorrow is Yom Tov
             if (tomorrowIsYomTov) {
                 sub = "ותודיענו";
+                // No default blessing here — tomorrow's davening is Yom Tov.
             } else if (hText.includes("ראש חודש")) {
                 sub = "הלל, יעלה ויבא";
+                showDefaultBlessingExtra = true;
             } else {
                 sub = tR !== "" ? tR : "אתה חוננתנו";
+                showDefaultBlessingExtra = true;
             }
             cls = "teal-box";
         } else {
             head = "מוצאי שבת";
             sub = "אתה חוננתנו";
+            showDefaultBlessingExtra = true;
         }
     } else if (isYomTov) {
         // Yom Tov (RULE 4)
@@ -1169,6 +1177,7 @@ function updateUI() {
             head = "מוצאי יום טוב"; 
             sub = "אתה חוננתנו"; 
             cls = "gold-box";
+            showDefaultBlessingExtra = true;
         } else {
             head = hText || "יום טוב"; 
             sub = tR; 
