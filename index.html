@@ -1125,10 +1125,13 @@ function parseMoladEntry(str) {
     if (!str) return null;
     try {
         let withoutDay = str.replace(/^[^,]+,\s*/, "");
-        let parts = withoutDay.match(/^(.+?),\s*(\d+):(\d+)\s*(am|pm)\s+and\s+(\d+)\s+chalakim/i);
+        // Chalakim clause is optional (0 chalakim omits it entirely) and uses
+        // singular "chelek" for exactly 1, plural "chalakim" for 2+ — accept
+        // either, and default to 0 when the whole clause is absent.
+        let parts = withoutDay.match(/^(.+?),\s*(\d+):(\d+)\s*(am|pm)(?:\s+and\s+(\d+)\s+(?:chalakim|chelek))?/i);
         if (!parts) return null;
         let hour = parseInt(parts[2]), min = parseInt(parts[3]);
-        let ampm = parts[4].toLowerCase(), chalakim = parseInt(parts[5]);
+        let ampm = parts[4].toLowerCase(), chalakim = parts[5] ? parseInt(parts[5]) : 0;
         let extraSec = Math.round(chalakim * 10 / 3);
         if (ampm === "pm" && hour !== 12) hour += 12;
         if (ampm === "am" && hour === 12) hour = 0;
