@@ -159,7 +159,7 @@
   }
   #status-head { font-size: 6.2vh; line-height: 1.0; display: block; width: 100%; }
   #status-sub  { font-size: 3.2vh; color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
-  .text-sep { width: 55%; height: 1px; background: rgba(0,0,0,0.28); margin: 3px 0; flex-shrink: 0; }
+  .text-sep { width: 55%; height: 1px; background: rgba(0,0,0,0.28); margin: 1px 0; flex-shrink: 0; }
   #status-kl {
     display: inline-block; background: #F5F0E8;
     border: 3px solid #c0392b; border-radius: 10px;
@@ -545,6 +545,19 @@ function fit(el, vhStart) {
     el.style.fontSize = vh + "vh";
     while (el.scrollHeight > p.offsetHeight && vh > 1.0) {
         vh -= 0.15;
+        el.style.fontSize = vh + "vh";
+    }
+}
+
+// Same as fit() but checks an explicit container's overflow instead of
+// el.parentElement — needed for elements nested more than one level deep
+// (e.g. season pills inside .season-line inside .message-box).
+function fitInBox(el, container, vhStart) {
+    if (!el || !container) return;
+    let vh = vhStart;
+    el.style.fontSize = vh + "vh";
+    while (container.scrollHeight > container.clientHeight && vh > 1.0) {
+        vh = Math.max(1.0, vh - 0.15);
         el.style.fontSize = vh + "vh";
     }
 }
@@ -1025,6 +1038,16 @@ function updateUI() {
         fit(document.getElementById('status-head'), headSize);
         if (sub) fit(document.getElementById('status-sub'), 3.2);
         if (showKL) fit(document.getElementById('status-kl-text'), 3.2);
+        // Season pills are nested two levels deep (.message-box > .season-line
+        // > .season-pill), so plain fit() — which only checks the immediate
+        // parent — wouldn't see the outer box's overflow. Use fitInBox with
+        // the actual outer container instead, same as head/sub/KL get.
+        if (seasonLine) {
+            let msgBoxEl = $('LEFT_MSG').querySelector('.message-box');
+            if (msgBoxEl) {
+                msgBoxEl.querySelectorAll('.season-pill').forEach(pill => fitInBox(pill, msgBoxEl, 2.6));
+            }
+        }
     }
 
     // RULE 12: Image freeze
