@@ -1221,11 +1221,13 @@ function updateUI() {
     // Build the box as a list of present blocks, joined with a thin divider
     // between each — so whether it's 2 texts (head+sub) or 3 (head+sub+pills),
     // people can tell at a glance they're separate pieces of information.
-    let statusBlocks = [`<span id="status-head" style="font-size:${headSize}vh">${head}</span>`];
+    // מוריד הגשם/מוריד הטל always goes above ותן ברכה/ותן טל ומטר.
+    let statusBlocks = [];
+    if (geshemTalLine) statusBlocks.push(geshemTalLine);
+    statusBlocks.push(`<span id="status-head" style="font-size:${headSize}vh">${head}</span>`);
     if (sub) statusBlocks.push(`<span id="status-sub">${sub}</span>`);
     if (klLine) statusBlocks.push(klLine);
     if (seasonLine) statusBlocks.push(seasonLine);
-    if (geshemTalLine) statusBlocks.push(geshemTalLine);
     let textSep = '<div class="text-sep"></div>';
     let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}">${statusBlocks.join(textSep)}</div>`;
     if (sH !== currentStatusHTML) {
