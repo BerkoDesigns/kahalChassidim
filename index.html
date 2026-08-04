@@ -1121,8 +1121,11 @@ function updateUI() {
             head = rcHeadText; sub = "הלל, יעלה ויבא"; cls = "teal-box";
         } else if (hText !== "" && !isPastRT) {
             // Holiday text before RT (RULE 4, RULE 8) - but NOT Rosh Chodesh (already caught above)
+            // Guard against tR happening to equal hText itself (e.g. אסרו
+            // חג, where the holiday name and Tachanun-reason default resolve
+            // to the same string).
             head = hText; 
-            sub = tR; 
+            sub = (tR === hText) ? "" : tR; 
             cls = "teal-box";
         } else if (tR !== "" && !isPastRTMinus25) {
             // Tachanun override (RULE 4) — disappears 20 min before RT. If
