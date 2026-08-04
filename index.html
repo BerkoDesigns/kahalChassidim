@@ -927,7 +927,29 @@ function updateUI() {
     // RULE 2 & 3: Flip logic
     let rtSecs = getSec(dToday.z[10], true) + 120;
     let oIso   = (cSec >= rtSecs - 1500) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now); // 25 min before RT
-    let dIso   = (cSec < getSec(dToday.z[0], false)) ? getIso(new Date(now.getTime() - 86400000)) : getIso(now);
+
+    // Hebrew Date Flip for dIso/dDate:
+    // - Chag to chag (today IS Yom Tov, tomorrow IS ALSO Yom Tov — e.g.
+    //   שמיני עצרת → שמחת תורה, or day 1 → day 2 of RH/Sukkot): flips
+    //   25 min before RT, same boundary oIso already uses for the Omer.
+    // - Friday, or Erev Yom Tov on any other day (today NOT Yom Tov,
+    //   tomorrow IS): flip at candle lighting.
+    // - Otherwise: existing dawn-based (Alos Hashachar) flip, unchanged.
+    let tomorrowIsoForFlip = getIso(new Date(now.getTime() + 86400000));
+    let tomorrowDataForFlip = schedule[tomorrowIsoForFlip];
+    let tomorrowIsYomTovForFlip = tomorrowDataForFlip && tomorrowDataForFlip.yomtov === "Y";
+    let todayIsYomTovForFlip = dToday.yomtov === "Y";
+    let candleTimeForFlip = (dToday.candle || "").trim();
+    let candleSecsForFlip = candleTimeForFlip ? getSec(candleTimeForFlip, false) : 0;
+
+    let dIso;
+    if (tomorrowIsYomTovForFlip && todayIsYomTovForFlip) {
+        dIso = (cSec >= rtSecs - 1500) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
+    } else if (dayW === 5 || (tomorrowIsYomTovForFlip && !todayIsYomTovForFlip)) {
+        dIso = (candleSecsForFlip > 0 && cSec >= candleSecsForFlip) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
+    } else {
+        dIso = (cSec < getSec(dToday.z[0], false)) ? getIso(new Date(now.getTime() - 86400000)) : getIso(now);
+    }
     let dOmer  = schedule[oIso] || dToday;
     let dDate  = schedule[dIso] || dToday;
 
