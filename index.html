@@ -159,6 +159,7 @@
   }
   #status-head { font-size: 6.2vh; line-height: 1.0; display: block; width: 100%; }
   #status-sub  { font-size: 3.2vh; color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
+  .text-sep { width: 55%; height: 1px; background: rgba(0,0,0,0.28); margin: 3px 0; flex-shrink: 0; }
   #status-kl {
     display: inline-block; background: #F5F0E8;
     border: 3px solid #c0392b; border-radius: 10px;
@@ -986,7 +987,15 @@ function updateUI() {
 
     let hasExtra = sub || showKL || seasonPills.length > 0;
     let headSize = hasExtra ? 6.2 : 8.5;
-    let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}"><span id="status-head" style="font-size:${headSize}vh">${head}</span>${sub ? `<span id="status-sub">${sub}</span>` : ''}${klLine}${seasonLine}</div>`;
+    // Build the box as a list of present blocks, joined with a thin divider
+    // between each — so whether it's 2 texts (head+sub) or 3 (head+sub+pills),
+    // people can tell at a glance they're separate pieces of information.
+    let statusBlocks = [`<span id="status-head" style="font-size:${headSize}vh">${head}</span>`];
+    if (sub) statusBlocks.push(`<span id="status-sub">${sub}</span>`);
+    if (klLine) statusBlocks.push(klLine);
+    if (seasonLine) statusBlocks.push(seasonLine);
+    let textSep = '<div class="text-sep"></div>';
+    let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}">${statusBlocks.join(textSep)}</div>`;
     if (sH !== currentStatusHTML) {
         $('LEFT_MSG').innerHTML = sH; 
         currentStatusHTML = sH;
