@@ -354,8 +354,8 @@ var simchatTorahIso = null;     // 23 Tishrei — לדוד's end date (Bayswater
 var shminiAtzeretIso = null;    // 22 Tishrei — Geshem season start (different day than Simchat Torah)
 var pesach1Iso = null;          // 15 Nissan — general reference (narrow-window search)
 // Geshem/Tal need their OWN pair of boundary dates — see computeGeshemTalDates.
-var geshemStartIso = null;      // most recent Shmini Atzeret at/before today
-var geshemEndIso = null;        // the Pesach 1 that follows geshemStartIso
+var currentGeshemTalSeason = null; // 'geshem' | 'tal' | null
+var geshemTalBoundaryIso = null;   // date the CURRENT season ends
 var selichotStartIso = null;    // the Saturday whose night Selichot begins
 var p1RotateTimer = null, isShabbosImageActive = false;
 var currentlyHighlightedId = null, currentStatusHTML = "", lastDateIso = "";
@@ -500,57 +500,33 @@ function computeSeasonDates() {
     computeGeshemTalDates();
 }
 
-// Scans the ENTIRE schedule (not a narrow window) for geshemStartIso (the
-// latest Shmini Atzeret at/before today, falling back to the earliest
-// available one if today is before all of them) and geshemEndIso (the
-// first Pesach 1 strictly after that Shmini Atzeret) — correctly paired
-// regardless of where "today" falls in the ~6-month Geshem/Tal span.
+// Forward-only search: just find the NEXT occurrence of each boundary.
+// Whichever comes sooner tells us which season we're currently in — no
+// backward history needed, works regardless of how far back the sheet's
+// data goes (this replaced an earlier backward-search + fallback design
+// that broke both when history was missing AND when "today" was just a
+// couple days before a real, known boundary).
 function computeGeshemTalDates() {
-    geshemStartIso = null; geshemEndIso = null;
+    currentGeshemTalSeason = null; geshemTalBoundaryIso = null;
     if (!schedule) return;
     let todayIso = getIso(new Date());
     let isos = Object.keys(schedule).sort();
 
-    let allSA = [], allPesach = [];
+    let nextSA = null, nextPesach = null;
     for (let iso of isos) {
+        if (iso < todayIso) continue;
         let heb = (schedule[iso] || {}).heb || "";
-        if (heb.includes("תשרי") && extractHebDay(heb) === 22) allSA.push(iso);
-        if (heb.includes("ניסן") && extractHebDay(heb) === 15) allPesach.push(iso);
+        if (!nextSA && heb.includes("תשרי") && extractHebDay(heb) === 22) nextSA = iso;
+        if (!nextPesach && heb.includes("ניסן") && extractHebDay(heb) === 15) nextPesach = iso;
+        if (nextSA && nextPesach) break;
     }
-    if (!allSA.length && !allPesach.length) return;
 
-    // Whichever boundary most recently occurred (at or before today) tells
-    // us which season we're actually in — checking Shmini Atzeret's
-    // presence alone isn't enough, since a sheet that doesn't go back far
-    // enough could be missing last year's SA even though we're clearly
-    // past a more recent Pesach (i.e. currently in Tal season).
-    let lastSA = null;     for (let iso of allSA) if (iso <= todayIso) lastSA = iso;
-    let lastPesach = null; for (let iso of allPesach) if (iso <= todayIso) lastPesach = iso;
-
-    if (lastSA && (!lastPesach || lastSA > lastPesach)) {
-        // Most recent transition was Shmini Atzeret, not yet superseded by
-        // a Pesach — we're in (or entering) Geshem season.
-        geshemStartIso = lastSA;
-        for (let iso of allPesach) { if (iso > geshemStartIso) { geshemEndIso = iso; break; } }
-    } else if (lastPesach) {
-        // Most recent transition was Pesach — we're in (or entering) Tal
-        // season. Still resolve geshemStartIso to the SA that PRECEDED this
-        // Pesach (not left null) so Pesach 1's own Mincha-Gedolah boundary
-        // check in isGeshemActive still works correctly on that exact day.
-        geshemEndIso = lastPesach;
-        for (let i = allSA.length - 1; i >= 0; i--) { if (allSA[i] < geshemEndIso) { geshemStartIso = allSA[i]; break; } }
-    } else if (lastSA) {
-        geshemStartIso = lastSA; // SA exists but no Pesach has occurred yet
-    } else {
-        // Neither boundary has occurred yet within available data — anchor
-        // to whichever comes first, so there's something to build on once
-        // that date arrives.
-        if (allSA.length && (!allPesach.length || allSA[0] <= allPesach[0])) {
-            geshemStartIso = allSA[0];
-            for (let iso of allPesach) { if (iso > geshemStartIso) { geshemEndIso = iso; break; } }
-        } else if (allPesach.length) {
-            geshemEndIso = allPesach[0];
-        }
+    if (nextPesach && (!nextSA || nextPesach < nextSA)) {
+        currentGeshemTalSeason = 'geshem';
+        geshemTalBoundaryIso = nextPesach;
+    } else if (nextSA) {
+        currentGeshemTalSeason = 'tal';
+        geshemTalBoundaryIso = nextSA;
     }
 }
 
@@ -580,49 +556,27 @@ function isLedavidActive(todayIso, cSecNow) {
 // Atzeret's actual Mincha Gedolah zman, ends at 1st day Pesach's Mincha
 // Gedolah — precise Hebrew-date + zman triggers, not a civil-month guess.
 function isGeshemActive(todayIso, cSecNow) {
-    if (!geshemStartIso) return false;
-    if (todayIso < geshemStartIso) return false;
-    if (geshemEndIso && todayIso > geshemEndIso) return false;
-    if (todayIso === geshemStartIso) {
-        let entry = schedule[todayIso];
-        if (!entry || !entry.z) return false;
-        return cSecNow >= getSec(entry.z[7], true); // מנחה גדולה
-    }
-    if (geshemEndIso && todayIso === geshemEndIso) {
+    if (currentGeshemTalSeason !== 'geshem') return false;
+    if (!geshemTalBoundaryIso) return true;
+    if (todayIso > geshemTalBoundaryIso) return false; // safety net if cache is stale
+    if (todayIso === geshemTalBoundaryIso) {
         let entry = schedule[todayIso];
         if (!entry || !entry.z) return true;
-        return cSecNow < getSec(entry.z[7], true); // still before Mincha Gedolah
+        return cSecNow < getSec(entry.z[7], true); // before Mincha Gedolah on Pesach 1
     }
-    return true; // strictly between the two boundary days
+    return true;
 }
 
 // מוריד הטל — Bayswater-specific (Chesed V'Emes is Ashkenaz and omits this
-// entirely rather than saying a substitute). Mirror image of isGeshemActive:
-// starts at Pesach 1's Mincha Gedolah, ends at the FOLLOWING Shmini
-// Atzeret's Mincha Gedolah — geshemEndIso only pairs one cycle forward from
-// geshemStartIso, so isTalActive needs its own upper-bound lookup rather
-// than reusing geshemStartIso (which would be the PAST Shmini Atzeret).
+// entirely rather than saying a substitute). Mirror image of isGeshemActive.
 function isTalActive(todayIso, cSecNow) {
-    if (!geshemEndIso) return false;
-    if (todayIso < geshemEndIso) return false;
-    // Find the next Shmini Atzeret after geshemEndIso (the actual upper bound for Tal)
-    let nextShminiAtzeretIso = null;
-    let isos = Object.keys(schedule).sort();
-    for (let iso of isos) {
-        if (iso <= geshemEndIso) continue;
-        let heb = (schedule[iso] || {}).heb || "";
-        if (heb.includes("תשרי") && extractHebDay(heb) === 22) { nextShminiAtzeretIso = iso; break; }
-    }
-    if (nextShminiAtzeretIso && todayIso > nextShminiAtzeretIso) return false;
-    if (todayIso === geshemEndIso) {
+    if (currentGeshemTalSeason !== 'tal') return false;
+    if (!geshemTalBoundaryIso) return true;
+    if (todayIso > geshemTalBoundaryIso) return false; // safety net if cache is stale
+    if (todayIso === geshemTalBoundaryIso) {
         let entry = schedule[todayIso];
         if (!entry || !entry.z) return false;
-        return cSecNow >= getSec(entry.z[7], true);
-    }
-    if (nextShminiAtzeretIso && todayIso === nextShminiAtzeretIso) {
-        let entry = schedule[todayIso];
-        if (!entry || !entry.z) return true;
-        return cSecNow < getSec(entry.z[7], true);
+        return cSecNow >= getSec(entry.z[7], true); // after Mincha Gedolah on Shmini Atzeret
     }
     return true;
 }
@@ -1205,15 +1159,6 @@ function updateUI() {
     let geshemTalText = "";
     if (isGeshemActive(todayIsoForSeason, cSec)) geshemTalText = "מוריד הגשם";
     else if (isTalActive(todayIsoForSeason, cSec)) geshemTalText = "מוריד הטל";
-    if (!geshemTalText) {
-        // Precise Hebrew-date system found nothing for today — most likely
-        // the sheet's data doesn't reach back far enough to find the real
-        // boundary. Fall back to a rough civil-month approximation rather
-        // than showing nothing.
-        let civMonthFallback = new Date().getMonth() + 1;
-        let isGeshemApprox = (civMonthFallback >= 10 || civMonthFallback <= 4);
-        geshemTalText = isGeshemApprox ? "מוריד הגשם" : "מוריד הטל";
-    }
     let geshemTalLine = geshemTalText ? `<span class="geshem-tal-text">${geshemTalText}</span>` : "";
 
     let hasExtra = sub || showKL || seasonPills.length > 0 || geshemTalText;
