@@ -587,13 +587,28 @@ function isEsseraBTevet(hebDate) {
 }
 
 // RULE 10: KIDDUSH LEVANA
-function getKiddushLevana(now, hebDate, isShab, holidayText, dayOfWeek, cSec, alosSec) {
+function getKiddushLevana(now, hebDate, isShab, holidayText, dayOfWeek, cSec, alosSec, shkiaSec) {
     if (isShab) return false;
+    if (holidayText && holidayText.trim() !== "" && !holidayText.includes("תשעה באב") && !holidayText.includes("יום כיפור")) return false;
     if (dayOfWeek === 5) return false;
     if (isNineDays(hebDate)) return false;
     // On Tisha B'Av (9 Av), only show KL from Alos onwards
     if (hebDate.startsWith("ט׳") && hebDate.includes("אב")) {
         if (cSec < alosSec) return false;
+    }
+    // Custom: never show Kiddush Levana anywhere in Tishrei until Yom Kippur
+    // afternoon — mirrors the Nine Days/Tisha B'Av pattern above. 1-9 Tishrei
+    // are fully blocked regardless of the Molad-timing window below; Yom
+    // Kippur itself (10 Tishrei) opens back up at Shkiah, not from midnight.
+    if (hebDate.includes("תשרי")) {
+        let tishreiDay = extractHebDay(hebDate);
+        if (tishreiDay >= 1 && tishreiDay <= 10) {
+            if (tishreiDay === 10) {
+                if (cSec < shkiaSec) return false;
+            } else {
+                return false;
+            }
+        }
     }
     let nowMs = now.getTime(), bestMolad = null;
     for (let mol of moladList) {
@@ -970,7 +985,7 @@ function updateUI() {
     }
 
     // RULE 10: KIDDUSH LEVANA
-    let showKL = getKiddushLevana(now, dDate.heb || "", isShab, hText, dayW, cSec, getSec(dToday.z[0], false));
+    let showKL = getKiddushLevana(now, dDate.heb || "", isShab, hText, dayW, cSec, getSec(dToday.z[0], false), getSec(dToday.z[9], true));
     let klLine = showKL ? `<span id="status-kl"><span id="status-kl-text">קידוש לבנה</span></span>` : "";
 
     // Elul season — stacks as extra pills alongside whatever the box is
