@@ -575,6 +575,34 @@ function fitGroupInBox(els, container, vhStart) {
     }
 }
 
+// Replaces separately fitting head/sub/KL/pills — instead, one shared "unit"
+// sizes all of them together as proportions (head=1.0x, sub=0.65x, KL
+// badge=0.55x, pills=0.45x), shrinking that single unit in lockstep until
+// the whole box fits. Matches the approved mockup: everything shrinks
+// together as more blocks stack, rather than each type fighting for space
+// independently and ending up mismatched.
+function fitUnifiedStatusBox(container, vhStart) {
+    if (!container) return;
+    let head  = container.querySelector('#status-head');
+    let sub   = container.querySelector('#status-sub');
+    let klText = container.querySelector('#status-kl-text');
+    let pills = Array.from(container.querySelectorAll('.season-pill'));
+
+    function applyUnit(u) {
+        if (head) head.style.fontSize = u + "vh";
+        if (sub) sub.style.fontSize = (u * 0.65) + "vh";
+        if (klText) klText.style.fontSize = (u * 0.55) + "vh";
+        pills.forEach(p => p.style.fontSize = (u * 0.45) + "vh");
+    }
+
+    let unit = vhStart;
+    applyUnit(unit);
+    while (container.scrollHeight > container.clientHeight && unit > 1.0) {
+        unit = Math.max(1.0, unit - 0.15);
+        applyUnit(unit);
+    }
+}
+
 // Expand UP to fill available space (for molad & summer messages)
 function fitExpand(el, vhStart, vhMax) {
     if (!el) return;
@@ -1048,20 +1076,8 @@ function updateUI() {
     if (sH !== currentStatusHTML) {
         $('LEFT_MSG').innerHTML = sH; 
         currentStatusHTML = sH;
-        fit(document.getElementById('status-head'), headSize);
-        if (sub) fit(document.getElementById('status-sub'), 3.2);
-        if (showKL) fit(document.getElementById('status-kl-text'), 3.2);
-        // Season pills are nested two levels deep (.message-box > .season-line
-        // > .season-pill), so plain fit() — which only checks the immediate
-        // parent — wouldn't see the outer box's overflow. Use fitInBox with
-        // the actual outer container instead, same as head/sub/KL get.
-        if (seasonLine) {
-            let msgBoxEl = $('LEFT_MSG').querySelector('.message-box');
-            if (msgBoxEl) {
-                let pills = Array.from(msgBoxEl.querySelectorAll('.season-pill'));
-                fitGroupInBox(pills, msgBoxEl, 2.6);
-            }
-        }
+        let msgBoxEl = $('LEFT_MSG').querySelector('.message-box');
+        if (msgBoxEl) fitUnifiedStatusBox(msgBoxEl, headSize);
     }
 
     // RULE 12: Image freeze
