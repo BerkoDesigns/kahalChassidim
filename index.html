@@ -153,7 +153,7 @@
   /* Elul season lines (לדוד ה' אורי / שופר / סליחות) — compact pills */
   .season-line { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
   .season-pill {
-    font-family: 'Assistant', sans-serif; font-weight: 700; font-size: 1.8vh;
+    font-family: 'Assistant', sans-serif; font-weight: 700; font-size: 2.2vh;
     background: #ffffffaa; border: 1px solid var(--gold-dark); color: var(--gold-dark);
     border-radius: 20px; padding: 2px 10px;
   }
@@ -977,7 +977,7 @@ function updateUI() {
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
         : "";
 
-    let hasExtra = sub || showKL;
+    let hasExtra = sub || showKL || seasonPills.length > 0;
     let headSize = hasExtra ? 6.2 : 8.5;
     let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}"><span id="status-head" style="font-size:${headSize}vh">${head}</span>${sub ? `<span id="status-sub">${sub}</span>` : ''}${klLine}${seasonLine}</div>`;
     if (sH !== currentStatusHTML) {
