@@ -1205,6 +1205,15 @@ function updateUI() {
     let geshemTalText = "";
     if (isGeshemActive(todayIsoForSeason, cSec)) geshemTalText = "מוריד הגשם";
     else if (isTalActive(todayIsoForSeason, cSec)) geshemTalText = "מוריד הטל";
+    if (!geshemTalText) {
+        // Precise Hebrew-date system found nothing for today — most likely
+        // the sheet's data doesn't reach back far enough to find the real
+        // boundary. Fall back to a rough civil-month approximation rather
+        // than showing nothing.
+        let civMonthFallback = new Date().getMonth() + 1;
+        let isGeshemApprox = (civMonthFallback >= 10 || civMonthFallback <= 4);
+        geshemTalText = isGeshemApprox ? "מוריד הגשם" : "מוריד הטל";
+    }
     let geshemTalLine = geshemTalText ? `<span class="geshem-tal-text">${geshemTalText}</span>` : "";
 
     let hasExtra = sub || showKL || seasonPills.length > 0 || geshemTalText;
