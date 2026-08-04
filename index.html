@@ -556,29 +556,45 @@ function isLedavidActive(todayIso, cSecNow) {
 // Atzeret's actual Mincha Gedolah zman, ends at 1st day Pesach's Mincha
 // Gedolah — precise Hebrew-date + zman triggers, not a civil-month guess.
 function isGeshemActive(todayIso, cSecNow) {
-    if (currentGeshemTalSeason !== 'geshem') return false;
-    if (!geshemTalBoundaryIso) return true;
-    if (todayIso > geshemTalBoundaryIso) return false; // safety net if cache is stale
-    if (todayIso === geshemTalBoundaryIso) {
+    if (currentGeshemTalSeason === 'geshem') {
+        if (!geshemTalBoundaryIso || todayIso < geshemTalBoundaryIso) return true;
+        if (todayIso > geshemTalBoundaryIso) return false; // safety net if cache is stale
+        // today IS Pesach 1 itself — active until Mincha Gedolah
         let entry = schedule[todayIso];
         if (!entry || !entry.z) return true;
-        return cSecNow < getSec(entry.z[7], true); // before Mincha Gedolah on Pesach 1
+        return cSecNow < getSec(entry.z[7], true);
     }
-    return true;
+    // currentGeshemTalSeason === 'tal': check whether today IS the upcoming
+    // Shmini Atzeret and we're already past its Mincha Gedolah — if so
+    // Geshem has already started even though the season label still says
+    // 'tal' (it only flips on the next computeSeasonDates() call).
+    if (currentGeshemTalSeason === 'tal' && geshemTalBoundaryIso === todayIso) {
+        let entry = schedule[todayIso];
+        if (entry && entry.z) return cSecNow >= getSec(entry.z[7], true);
+    }
+    return false;
 }
 
 // מוריד הטל — Bayswater-specific (Chesed V'Emes is Ashkenaz and omits this
 // entirely rather than saying a substitute). Mirror image of isGeshemActive.
 function isTalActive(todayIso, cSecNow) {
-    if (currentGeshemTalSeason !== 'tal') return false;
-    if (!geshemTalBoundaryIso) return true;
-    if (todayIso > geshemTalBoundaryIso) return false; // safety net if cache is stale
-    if (todayIso === geshemTalBoundaryIso) {
+    if (currentGeshemTalSeason === 'tal') {
+        if (!geshemTalBoundaryIso || todayIso < geshemTalBoundaryIso) return true;
+        if (todayIso > geshemTalBoundaryIso) return false; // safety net if cache is stale
+        // today IS Shmini Atzeret itself — Tal active until Mincha Gedolah
         let entry = schedule[todayIso];
-        if (!entry || !entry.z) return false;
-        return cSecNow >= getSec(entry.z[7], true); // after Mincha Gedolah on Shmini Atzeret
+        if (!entry || !entry.z) return true;
+        return cSecNow < getSec(entry.z[7], true);
     }
-    return true;
+    // currentGeshemTalSeason === 'geshem': check whether today IS the
+    // upcoming Pesach 1 and we're already past its Mincha Gedolah — if so
+    // Tal has already started even though the season label still says
+    // 'geshem' (it only flips on the next computeSeasonDates() call).
+    if (currentGeshemTalSeason === 'geshem' && geshemTalBoundaryIso === todayIso) {
+        let entry = schedule[todayIso];
+        if (entry && entry.z) return cSecNow >= getSec(entry.z[7], true);
+    }
+    return false;
 }
 
 function isShofarActive(todayIso, cSecNow, dayW) {
