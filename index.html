@@ -153,7 +153,7 @@
   /* Elul season lines (לדוד ה' אורי / שופר / סליחות) — compact pills */
   .season-line { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
   .season-pill {
-    font-family: 'Assistant', sans-serif; font-weight: 700; font-size: 2.2vh;
+    font-family: 'Assistant', sans-serif; font-weight: 700; font-size: 2.6vh;
     background: #ffffffaa; border: 1px solid var(--gold-dark); color: var(--gold-dark);
     border-radius: 20px; padding: 2px 10px;
   }
@@ -521,14 +521,17 @@ function isShofarActive(todayIso, cSecNow, dayW) {
 
 function isSelichotActive(todayIso, cSecNow, dayW, isYomTovNow) {
     if (!selichotStartIso || !yomKippurIso) return false;
-    if (dayW === 6 || isYomTovNow) return false; // never Shabbos or Yom Tov (incl. RH, YK)
     let erevYkIso = getIsoMinusDays(yomKippurIso, 1);
     if (todayIso < selichotStartIso || todayIso > erevYkIso) return false;
+    // Start day is always a Saturday by design (Motzei Shabbat) — check it
+    // before the general Shabbos/Yom Tov exclusion below, since the trigger
+    // only fires once Shabbos ends that same calendar Saturday.
     if (todayIso === selichotStartIso) {
         let startEntry = schedule[todayIso];
         if (!startEntry || !startEntry.z) return false;
         return cSecNow >= getSec(startEntry.z[10], true); // begins once Shabbos ends (RT)
     }
+    if (dayW === 6 || isYomTovNow) return false; // never Shabbos or Yom Tov (incl. RH, YK)
     if (todayIso === erevYkIso) return cSecNow < 43200; // one-time noon cutoff
     return true; // any day strictly between start and Erev YK
 }
@@ -830,7 +833,7 @@ function updateUI() {
     if (isShab) {
     // Shabbat
     if (isYomTov && hText) {
-        head = "שבת / " + hText;
+        head = hText;
         sub = "";
         cls = "teal-box";
     } else if (hText.includes("ראש חודש")) {
@@ -923,7 +926,11 @@ function updateUI() {
         let rcHeadText     = todayIsRC ? hText : (dToday.holidayText || "ראש חודש");
         let dTomorrow      = schedule[getIso(new Date(new Date(dIso).getTime() + 86400000))];
         let tomorrowIsRC   = dTomorrow && (dTomorrow.holidayText || "").includes("ראש חודש");
-        let isErevRC       = tomorrowIsRC && cSec >= rochCutoff && !onRCDay;
+        // Dropped the old "&& !onRCDay" guard: today-is-RC AND tomorrow-is-RC
+        // can only mean today is day 1 of a 2-day RC (RC is never 3+ days),
+        // so this correctly continues the display into day 1's evening
+        // instead of falling back to the default message.
+        let isErevRC       = tomorrowIsRC && cSec >= rochCutoff;
 
         if (isErevRC) {
             head = dTomorrow.holidayText; sub = "הלל, יעלה ויבא"; cls = "teal-box";
