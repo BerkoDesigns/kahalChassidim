@@ -759,6 +759,14 @@ function updateUI() {
     let isMoledTime = (cSec >= 32400 && cSec <= 45000);  // 9am-12:30pm
     let isShabbat   = (now.getDay() === 6);
     let isMoledDisplay = isMoledTime && isShabbat && moledText !== "";
+    // Never show the Molad announcement on-screen anywhere in Tishrei
+    // (1-10 Tishrei), regardless of what's in Column Y that day — the
+    // underlying data still feeds Kiddush Levana normally via the
+    // separate "moled" tab, this only suppresses the Omer-box text.
+    if ((dDate.heb || "").includes("תשרי")) {
+        let tishreiDayForMoled = extractHebDay(dDate.heb || "");
+        if (tishreiDayForMoled >= 1 && tishreiDayForMoled <= 10) isMoledDisplay = false;
+    }
     
     let omerKey     = dOmer.omerNum ? String(dOmer.omerNum).trim() : null;
 
