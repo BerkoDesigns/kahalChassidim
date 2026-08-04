@@ -663,7 +663,7 @@ function fitUnifiedStatusBox(container, vhStart) {
     let klText = container.querySelector('#status-kl-text');
     let pills = Array.from(container.querySelectorAll('.season-pill'));
     // .geshem-tal-demoted only exists when מוריד הגשם/הטל is paired with
-    // something specific (not the plain default) — sized like a pill.
+    // something specific (not the plain default) — sized like the sub-line.
     // When promoted, the text is folded directly into #status-head instead
     // and gets sized at the full unit automatically.
     let geshemTalDemoted = container.querySelector('.geshem-tal-demoted');
@@ -673,7 +673,7 @@ function fitUnifiedStatusBox(container, vhStart) {
         if (sub) sub.style.fontSize = (u * 0.65) + "vh";
         if (klText) klText.style.fontSize = (u * 0.55) + "vh";
         pills.forEach(p => p.style.fontSize = (u * 0.45) + "vh");
-        if (geshemTalDemoted) geshemTalDemoted.style.fontSize = (u * 0.45) + "vh";
+        if (geshemTalDemoted) geshemTalDemoted.style.fontSize = (u * 0.65) + "vh";
     }
 
     let unit = vhStart;
@@ -1125,9 +1125,11 @@ function updateUI() {
             sub = tR; 
             cls = "teal-box";
         } else if (tR !== "" && !isPastRTMinus25) {
-            // Tachanun override (RULE 4) — disappears 20 min before RT
+            // Tachanun override (RULE 4) — disappears 20 min before RT. If
+            // tR is just the generic fallback (matched in the Reason tab
+            // but Column B was blank), don't repeat it as a sub-line.
             head = "אין אומרים תחנון"; 
-            sub = tR; 
+            sub = (tR === "אין אומרים תחנון") ? "" : tR; 
             cls = "teal-box";
         } else {
             // Check yesterday for Motzei Yom Tov after midnight (RULE 4)
