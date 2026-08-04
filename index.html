@@ -160,6 +160,7 @@
   #status-head { font-size: 6.2vh; line-height: 1.0; display: block; width: 100%; }
   #status-sub  { font-size: 3.2vh; color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
   .geshem-tal-text { color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
+  .default-blessing-demoted { color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
   .text-sep { width: 55%; height: 1px; background: rgba(0,0,0,0.28); margin: 1px 0; flex-shrink: 0; }
   #status-kl {
     display: inline-block; background: #F5F0E8;
@@ -667,6 +668,7 @@ function fitUnifiedStatusBox(container, vhStart) {
     // When promoted, the text is folded directly into #status-head instead
     // and gets sized at the full unit automatically.
     let geshemTalDemoted = container.querySelector('.geshem-tal-demoted');
+    let defaultBlessingDemoted = container.querySelector('.default-blessing-demoted');
 
     function applyUnit(u) {
         if (head) head.style.fontSize = u + "vh";
@@ -674,6 +676,7 @@ function fitUnifiedStatusBox(container, vhStart) {
         if (klText) klText.style.fontSize = (u * 0.55) + "vh";
         pills.forEach(p => p.style.fontSize = (u * 0.45) + "vh");
         if (geshemTalDemoted) geshemTalDemoted.style.fontSize = (u * 0.65) + "vh";
+        if (defaultBlessingDemoted) defaultBlessingDemoted.style.fontSize = (u * 0.65) + "vh";
     }
 
     let unit = vhStart;
@@ -1012,6 +1015,12 @@ function updateUI() {
     if (civMonthForTal >= 5 && civMonthForTal <= 11) isTalUmatar = false;
 
     let head = "", sub = "", cls = "gold-box";
+    // ותן ברכה/ותן טל ומטר is a Shemoneh Esrei insert, unrelated to
+    // Tachanun — applies every weekday regardless of what else the box
+    // shows. Set true inside the weekday branch below whenever something
+    // other than the plain default itself takes over the head/sub slots,
+    // so it can still be added back as an extra small line.
+    let showDefaultBlessingExtra = false;
     
     if (isShab) {
     // Shabbat
@@ -1117,8 +1126,10 @@ function updateUI() {
 
         if (isErevRC) {
             head = dTomorrow.holidayText; sub = "הלל, יעלה ויבא"; cls = "teal-box";
+            showDefaultBlessingExtra = true;
         } else if (onRCDay && cSec < rochCutoff) {
             head = rcHeadText; sub = "הלל, יעלה ויבא"; cls = "teal-box";
+            showDefaultBlessingExtra = true;
         } else if (hText !== "" && !isPastRT) {
             // Holiday text before RT (RULE 4, RULE 8) - but NOT Rosh Chodesh (already caught above)
             // Guard against tR happening to equal hText itself (e.g. אסרו
@@ -1127,6 +1138,7 @@ function updateUI() {
             head = hText; 
             sub = (tR === hText) ? "" : tR; 
             cls = "teal-box";
+            showDefaultBlessingExtra = true;
         } else if (tR !== "" && !isPastRTMinus25) {
             // Tachanun override (RULE 4) — disappears 20 min before RT. If
             // tR is just the generic fallback (matched in the Reason tab
@@ -1134,6 +1146,7 @@ function updateUI() {
             head = "אין אומרים תחנון"; 
             sub = (tR === "אין אומרים תחנון") ? "" : tR; 
             cls = "teal-box";
+            showDefaultBlessingExtra = true;
         } else {
             // Check yesterday for Motzei Yom Tov after midnight (RULE 4)
             let dYesterday = schedule[getIso(new Date(now.getTime() - 86400000))];
@@ -1143,11 +1156,13 @@ function updateUI() {
                 head = "מוצאי יום טוב"; 
                 sub = "אתה חוננתנו"; 
                 cls = "gold-box";
+                showDefaultBlessingExtra = true;
             } else if (dayW === 5 && !isYomTov && !isEsseraBTevet(dToday.heb) && !isPastRT) {
                 // RULE 13: FRIDAY TACHANUN
                 head = "אין אומרים תחנון"; 
                 sub = "ערב שבת קודש"; 
                 cls = "teal-box";
+                showDefaultBlessingExtra = true;
             } else {
                 // DEFAULT
                 head = isTalUmatar ? "ותן טל ומטר" : "ותן ברכה";
@@ -1191,7 +1206,15 @@ function updateUI() {
         ? `<span class="geshem-tal-text geshem-tal-demoted">${geshemTalText}</span>`
         : "";
 
-    let hasExtra = sub || showKL || seasonPills.length > 0 || geshemTalText;
+    // ותן ברכה/ותן טל ומטר as an extra small line whenever something else
+    // (holiday text, Tachanun, Rosh Chodesh, מוצאי יום טוב) took over the
+    // head/sub slots on a weekday — it's a Shemoneh Esrei insert, separate
+    // from Tachanun, so it still applies underneath whatever else shows.
+    let defaultBlessingLine = showDefaultBlessingExtra
+        ? `<span class="default-blessing-demoted">${isTalUmatar ? "ותן טל ומטר" : "ותן ברכה"}</span>`
+        : "";
+
+    let hasExtra = sub || showKL || seasonPills.length > 0 || geshemTalText || defaultBlessingLine;
     let headSize = hasExtra ? 6.2 : 8.5;
     // Build the box as a list of present blocks, joined with a thin divider
     // between each — so whether it's 2 texts (head+sub) or 3 (head+sub+pills),
@@ -1202,6 +1225,7 @@ function updateUI() {
     if (sub) statusBlocks.push(`<span id="status-sub">${sub}</span>`);
     if (klLine) statusBlocks.push(klLine);
     if (seasonLine) statusBlocks.push(seasonLine);
+    if (defaultBlessingLine) statusBlocks.push(defaultBlessingLine);
     if (demotedGeshemLine) statusBlocks.push(demotedGeshemLine);
     let textSep = '<div class="text-sep"></div>';
     let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}">${statusBlocks.join(textSep)}</div>`;
