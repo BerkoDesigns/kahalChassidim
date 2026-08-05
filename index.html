@@ -945,7 +945,7 @@ function updateUI() {
     let dIso;
     if (tomorrowIsYomTovForFlip && todayIsYomTovForFlip) {
         dIso = (cSec >= rtSecs - 1500) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
-    } else if (dayW === 5 || (tomorrowIsYomTovForFlip && !todayIsYomTovForFlip)) {
+    } else if (now.getDay() === 5 || (tomorrowIsYomTovForFlip && !todayIsYomTovForFlip)) {
         dIso = (candleSecsForFlip > 0 && cSec >= candleSecsForFlip) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
     } else {
         dIso = (cSec < getSec(dToday.z[0], false)) ? getIso(new Date(now.getTime() - 86400000)) : getIso(now);
