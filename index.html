@@ -1214,15 +1214,15 @@ function updateUI() {
         let dTomorrow = schedule[getIso(new Date(new Date(motzBaseIso + 'T00:00:00').getTime() + 86400000))];
         let tomorrowIsYomTov = dTomorrow && (dTomorrow.yomtov === "Y");
         
-        if (hText !== "" && !hText.includes("מברכים")) {
+        if (hText !== "" && !hText.trim().startsWith("שבת")) {
             head = hText;
             // Note: if Sunday has Rosh Chodesh it was already caught above
             // RULE: ותודיענו ONLY when Motzei Shabbat + Tomorrow is Yom Tov
-            // "שבת מברכים" is a Shabbos-specific announcement (blessing the
-            // new month) — it doesn't carry over once Shabbos has ended, so
-            // it's excluded here and falls through to plain "מוצאי שבת"
-            // below, unlike other holiday text (e.g. סוכות) which does
-            // meaningfully continue into the evening.
+            // Any "שבת X" label (מברכים, שובה, חזון, נחמו, הגדול, etc.) is a
+            // Shabbos-specific name that doesn't carry over once Shabbos has
+            // ended, so it's excluded here and falls through to plain
+            // "מוצאי שבת" below — unlike other holiday text (e.g. סוכות)
+            // which does meaningfully continue into the evening.
             if (tomorrowIsYomTov) {
                 sub = "ותודיענו";
                 // No default blessing here — tomorrow's davening is Yom Tov.
