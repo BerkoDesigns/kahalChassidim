@@ -1214,7 +1214,7 @@ function updateUI() {
         let civilTodayIsRC = (dToday.holidayText || "").includes("ראש חודש");
         let onRCDay        = todayIsRC || civilTodayIsRC;
         let rcHeadText     = todayIsRC ? hText : (dToday.holidayText || "ראש חודש");
-        let dTomorrow      = schedule[getIso(new Date(new Date(dIso).getTime() + 86400000))];
+        let dTomorrow      = schedule[getIso(new Date(new Date(dIso + 'T00:00:00').getTime() + 86400000))];
         let tomorrowIsRC   = dTomorrow && (dTomorrow.holidayText || "").includes("ראש חודש");
         // Dropped the old "&& !onRCDay" guard: today-is-RC AND tomorrow-is-RC
         // can only mean today is day 1 of a 2-day RC (RC is never 3+ days),
