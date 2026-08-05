@@ -1244,8 +1244,11 @@ function updateUI() {
             cls = "gold-box";
             showDefaultBlessingExtra = true;
         } else {
+            // No sub-text on Yom Tov itself — Tachanun is never relevant
+            // (it's simply never said), so any tR value is redundant noise
+            // here and gets dropped rather than shown.
             head = hText || "יום טוב"; 
-            sub = tR; 
+            sub = ""; 
             cls = "teal-box";
         }
     } else {
