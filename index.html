@@ -1168,8 +1168,12 @@ function updateUI() {
         }
     } else if (isMotz) {
         // Motzei Shabbat (RULE 9) - show Sunday's holiday if it exists
-        // Check if TOMORROW (Sunday) is a Yom Tov (for ותודיענו rule)
-        let dTomorrow = schedule[getIso(new Date(now.getTime() + 86400000))];
+        // "Tomorrow" needs its own base — plain `now` mishandles the
+        // Sunday-before-3AM overlap (still conceptually "Motzei Shabbat"),
+        // where "tomorrow" should mean the day we're already in (Sunday),
+        // not the day after it.
+        let motzBaseIso = (dayW === 0 && cSec < THREE_AM) ? getIso(new Date(now.getTime() - 86400000)) : getIso(now);
+        let dTomorrow = schedule[getIso(new Date(new Date(motzBaseIso + 'T00:00:00').getTime() + 86400000))];
         let tomorrowIsYomTov = dTomorrow && (dTomorrow.yomtov === "Y");
         
         if (hText !== "") {
