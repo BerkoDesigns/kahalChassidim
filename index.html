@@ -647,15 +647,15 @@ function isTalActive(todayIso, cSecNow) {
     return false;
 }
 
-function isShofarActive(todayIso, cSecNow, dayW) {
-    if (dayW === 6) return false; // never on Shabbos
+function isShofarActive(todayIso, cSecNow, isShabNow) {
+    if (isShabNow) return false; // never once Shabbos has begun (accounts for Friday candle lighting)
     if (!elulEveIso || !roshHashanahIso) return false;
     if (!isPastEveningTrigger(elulEveIso, todayIso, cSecNow, 20)) return false; // Bayswater: 20 min
     let shofarEndIso = getIsoMinusDays(roshHashanahIso, 2); // stops 2 days before RH
     return todayIso <= shofarEndIso;
 }
 
-function isSelichotActive(todayIso, cSecNow, dayW, isYomTovNow) {
+function isSelichotActive(todayIso, cSecNow, isShabNow, isYomTovNow) {
     if (!selichotStartIso || !yomKippurIso) return false;
     let erevYkIso = getIsoMinusDays(yomKippurIso, 1);
     if (todayIso < selichotStartIso || todayIso > erevYkIso) return false;
@@ -667,7 +667,7 @@ function isSelichotActive(todayIso, cSecNow, dayW, isYomTovNow) {
         if (!startEntry || !startEntry.z) return false;
         return cSecNow >= getSec(startEntry.z[10], true); // begins once Shabbos ends (RT)
     }
-    if (dayW === 6 || isYomTovNow) return false; // never Shabbos or Yom Tov (incl. RH, YK)
+    if (isShabNow || isYomTovNow) return false; // never once Shabbos has begun (accounts for Friday candle lighting), or Yom Tov (incl. RH, YK)
     if (todayIso === erevYkIso) return cSecNow < 43200; // one-time noon cutoff
     return true; // any day strictly between start and Erev YK
 }
@@ -1114,17 +1114,55 @@ function updateUI() {
     // other than the plain default itself takes over the head/sub slots,
     // so it can still be added back as an extra small line.
     let showDefaultBlessingExtra = false;
+
+    // Friday-is-Rosh-Chodesh handling (checked before isShab so it can
+    // override the normal Erev-Shabbos flip):
+    // - fridayIsRC: is TODAY (civil Friday, via dToday — unaffected by the
+    //   candle-lighting flip) Rosh Chodesh?
+    // - Case 1 (fridayIsRC true, Shabbos itself NOT RC): keep showing the
+    //   RC display straight through candle lighting, only switching to
+    //   plain שבת קודש within 25 min of RT.
+    // - Cases 2/3 (Shabbos IS RC) are handled inside the isShab branch
+    //   below, using fridayIsRC to distinguish a 2-day RC spanning Fri+Sat
+    //   (switch immediately at candle lighting) from a single-day RC
+    //   landing on Shabbos alone (delay 45 min after candle lighting).
+    let fridayIsRC = (dayW === 5) && (dToday.holidayText || "").includes("ראש חודש");
+    // Look up Saturday's OWN holidayText directly (not hText, which is
+    // flip-state-dependent and would still reflect Friday's own data if
+    // checked before candle lighting has passed) — using now.getTime()
+    // arithmetic (a real Date object, not a string) so this is safe
+    // regardless of timezone.
+    let saturdayDataForRC = fridayIsRC ? schedule[getIso(new Date(now.getTime() + 86400000))] : null;
+    let saturdayIsRC = saturdayDataForRC && (saturdayDataForRC.holidayText || "").includes("ראש חודש");
+    let rochCutoffFriday = rtSecs - 1500;
+    let isCase1RCContinuation = fridayIsRC && !saturdayIsRC && cSec < rochCutoffFriday;
     
-    if (isShab) {
+    if (isCase1RCContinuation) {
+        head = (dToday.holidayText || "ראש חודש").trim();
+        sub = "הלל, יעלה ויבא";
+        cls = "teal-box";
+    } else if (isShab) {
     // Shabbat
     if (isYomTov && hText) {
         head = hText;
         sub = "";
         cls = "teal-box";
     } else if (hText.includes("ראש חודש")) {
-        head = "שבת ראש חודש";
-        sub = "הלל, יעלה ויבא, אתה יצרת";
-        cls = "teal-box";
+        // Shabbos is Rosh Chodesh. If Friday (today, civil) was ALSO RC,
+        // switch immediately at candle lighting (2-day RC spanning
+        // Fri+Sat). If Friday was NOT RC (a single-day RC landing on
+        // Shabbos alone), delay 45 min after candle lighting — show plain
+        // שבת קודש for those first 45 minutes.
+        let readyForRCDisplay = fridayIsRC || (cSec >= candleSecs + 2700); // 45 min
+        if (readyForRCDisplay) {
+            head = "שבת ראש חודש";
+            sub = "הלל, יעלה ויבא, אתה יצרת";
+            cls = "teal-box";
+        } else {
+            head = "שבת קודש";
+            sub = "";
+            cls = "gold-box";
+        }
     } else {
             // Check if this is Shabbat Mevarchim (look ahead for Rosh Chodesh in next 8 days)
             // OR if Col D contains "מברכים"
@@ -1184,7 +1222,7 @@ function updateUI() {
                 sub = "ותודיענו";
                 // No default blessing here — tomorrow's davening is Yom Tov.
             } else if (hText.includes("ראש חודש")) {
-                sub = "הלל, יעלה ויבא";
+                sub = "יעלה ויבא";
                 showDefaultBlessingExtra = true;
             } else {
                 sub = tR !== "" ? tR : "אתה חוננתנו";
@@ -1282,8 +1320,8 @@ function updateUI() {
     let todayIsoForSeason = getIso(now);
     let seasonPills = [];
     if (isLedavidActive(todayIsoForSeason, cSec)) seasonPills.push("לדוד ה' אורי");
-    if (isShofarActive(todayIsoForSeason, cSec, dayW)) seasonPills.push("שופר");
-    if (isSelichotActive(todayIsoForSeason, cSec, dayW, isYomTov)) seasonPills.push("סליחות");
+    if (isShofarActive(todayIsoForSeason, cSec, isShab)) seasonPills.push("שופר");
+    if (isSelichotActive(todayIsoForSeason, cSec, isShab, isYomTov)) seasonPills.push("סליחות");
     let seasonLine = seasonPills.length
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
         : "";
