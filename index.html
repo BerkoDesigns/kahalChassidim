@@ -941,6 +941,7 @@ function updateUI() {
     let todayIsYomTovForFlip = dToday.yomtov === "Y";
     let candleTimeForFlip = (dToday.candle || "").trim();
     let candleSecsForFlip = candleTimeForFlip ? getSec(candleTimeForFlip, false) : 0;
+    if (candleSecsForFlip > 0 && candleSecsForFlip < 43200) candleSecsForFlip += 43200; // Handle 12-hour format
 
     let dIso;
     if (tomorrowIsYomTovForFlip && todayIsYomTovForFlip) {
@@ -1047,7 +1048,7 @@ function updateUI() {
     let candleSecs = getSec(candleTime, false);
     if (candleSecs < 43200) candleSecs += 43200;
     let isShab    = (dayW===5 && candleTime && cSec >= candleSecs) || (dayW===6 && cSec < rtSecs);
-    let isYomTov  = (dToday.yomtov === "Y");
+    let isYomTov  = (dDate.yomtov === "Y");
     let isKodesh  = isShab || isYomTov;
     let isMotz   = (dayW===6 && cSec >= rtSecs) || (dayW===0 && cSec < THREE_AM);
     // isPastRT: cSec resets to a small number right after midnight, while
