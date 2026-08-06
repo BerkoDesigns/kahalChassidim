@@ -672,6 +672,41 @@ function isSelichotActive(todayIso, cSecNow, isShabNow, isYomTovNow) {
     return true; // any day strictly between start and Erev YK
 }
 
+// הושענות — Sukkot days 1-6 only (Tishrei 15-20; day 7/Hoshana Rabbah
+// excluded — all piyutim are said that day, nothing to single out). Active
+// window is Alos through Mincha Gedolah on the REAL civil day (todayIso via
+// dToday's own zmanim), independent of the board's flip boundary — same
+// principle as Kiddush Levana's own independent boundary. Shabbat within
+// that range always shows אום נצורה. Otherwise the piyut is chosen by
+// position among non-Shabbat days elapsed so far this Sukkot (1st-3rd: rite
+// rotation; 4th: אערוך שועי; 5th: אל למושעות) — day-of-week computed
+// directly from the date, never from sheet data, so it can't be thrown off
+// by anything flip-related.
+function getHoshanaText(todayIso, cSecNow, alosSec, minchaGedolahSec, isSefard) {
+    let entry = schedule[todayIso];
+    if (!entry || !entry.heb) return "";
+    if (getHebMonthOnly(entry.heb) !== "תשרי") return "";
+    let day = extractHebDay(entry.heb);
+    if (day < 15 || day > 20) return "";
+    if (cSecNow < alosSec || cSecNow >= minchaGedolahSec) return "";
+
+    let todayDate = new Date(todayIso + 'T00:00:00');
+    if (todayDate.getDay() === 6) return "אום נצורה";
+
+    let nonShabbatCount = 0;
+    for (let offset = 0; offset <= (day - 15); offset++) {
+        let d = new Date(todayDate.getTime() - offset * 86400000);
+        if (d.getDay() !== 6) nonShabbatCount++;
+    }
+
+    let bigThree = isSefard
+        ? ["אום נצורה", "למען אמיתך", "אבן שתיה"]
+        : ["למען אמיתך", "אבן שתיה", "אום נצורה"];
+    if (nonShabbatCount <= 3) return bigThree[nonShabbatCount - 1];
+    if (nonShabbatCount === 4) return "אערוך שועי";
+    if (nonShabbatCount === 5) return "אל למושעות";
+    return "";
+}
 
 function fit(el, vhStart) {
     if (!el) return;
@@ -1330,6 +1365,8 @@ function updateUI() {
     if (isLedavidActive(todayIsoForSeason, cSec)) seasonPills.push("לדוד ה' אורי");
     if (isShofarActive(todayIsoForSeason, cSec, isShab)) seasonPills.push("שופר");
     if (isSelichotActive(todayIsoForSeason, cSec, isShab, isYomTov)) seasonPills.push("סליחות");
+    let hoshanaText = getHoshanaText(todayIsoForSeason, cSec, getSec(dToday.z[0], false), getSec(dToday.z[7], true), true);
+    if (hoshanaText) seasonPills.push(hoshanaText);
     let seasonLine = seasonPills.length
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
         : "";
