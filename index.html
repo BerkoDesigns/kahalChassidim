@@ -713,19 +713,29 @@ function getHoshanaText(todayIso, cSecNow, alosSec, minchaGedolahSec) {
 // since Chanukah spans into Tevet) and on Purim only — 14 Adar (or 14
 // Adar Sheni in a leap year) — NOT Shushan Purim (15) and NOT Purim Katan
 // (Adar Rishon), since Al Hanissim isn't said on either of those. No
-// active-window restriction (unlike Hoshanot) — shown the entire day.
-function getAlHanissimText(todayIso) {
+// start-side restriction, but on the LAST day of each (Purim itself, since
+// it's a single day; Chanukah day 8) it ends offsetSec before RT that
+// evening, same pattern as isLedavidActive's Simchat Torah cutoff —
+// Bayswater passes 1200 (20 min), Chesed V'Emes passes 1500 (25 min).
+function getAlHanissimText(todayIso, cSecNow, offsetSec) {
     let entry = schedule[todayIso];
     if (!entry || !entry.heb) return "";
     let month = getHebMonthOnly(entry.heb);
     let day = extractHebDay(entry.heb);
 
-    if ((month === "אדר" || month === "אדר-ב") && day === 14) return "על הנסים";
+    if ((month === "אדר" || month === "אדר-ב") && day === 14) {
+        if (!entry.z) return "על הנסים"; // no zman data — show anyway rather than hide
+        return (cSecNow < (getSec(entry.z[10], true) - offsetSec)) ? "על הנסים" : "";
+    }
 
     let k25 = findKislev25Iso(todayIso);
     if (k25) {
         let diffDays = (new Date(todayIso).getTime() - new Date(k25).getTime()) / 86400000;
-        if (diffDays >= 0 && diffDays <= 7) return "על הנסים";
+        if (diffDays >= 0 && diffDays < 7) return "על הנסים"; // days 1-7, unrestricted
+        if (diffDays === 7) { // day 8 — ends offsetSec before RT tonight
+            if (!entry.z) return "על הנסים";
+            return (cSecNow < (getSec(entry.z[10], true) - offsetSec)) ? "על הנסים" : "";
+        }
     }
     return "";
 }
@@ -1389,7 +1399,7 @@ function updateUI() {
     if (isSelichotActive(todayIsoForSeason, cSec, isShab, isYomTov)) seasonPills.push("סליחות");
     let hoshanaText = getHoshanaText(todayIsoForSeason, cSec, getSec(dToday.z[0], false), getSec(dToday.z[7], true));
     if (hoshanaText) seasonPills.push(hoshanaText);
-    let alHanissimText = getAlHanissimText(todayIsoForSeason);
+    let alHanissimText = getAlHanissimText(todayIsoForSeason, cSec, 1200); // Bayswater: 20 min before RT
     if (alHanissimText) seasonPills.push(alHanissimText);
     let seasonLine = seasonPills.length
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
