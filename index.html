@@ -676,13 +676,23 @@ function isSelichotActive(todayIso, cSecNow, isShabNow, isYomTovNow) {
 // excluded — all piyutim are said that day, nothing to single out). Active
 // window is Alos through Mincha Gedolah on the REAL civil day (todayIso via
 // dToday's own zmanim), independent of the board's flip boundary — same
-// principle as Kiddush Levana's own independent boundary. Shabbat within
-// that range always shows אום נצורה. Otherwise the piyut is chosen by
-// position among non-Shabbat days elapsed so far this Sukkot (1st-3rd: rite
-// rotation; 4th: אערוך שועי; 5th: אל למושעות) — day-of-week computed
-// directly from the date, never from sheet data, so it can't be thrown off
-// by anything flip-related.
-function getHoshanaText(todayIso, cSecNow, alosSec, minchaGedolahSec, isSefard) {
+// principle as Kiddush Levana's own independent boundary.
+//
+// Fixed lookup table, not a formula — verified against 4 independent
+// printed/digital siddur sources (Sefaria Siddur Sefard, a Bayswater
+// printed Sefard page, and two Ashkenaz printed calendar pages), keyed by
+// the weekday Sukkot day 1 (Tishrei 15) falls on. Confirmed with the Rabbi
+// that Kahal Chassidim (Nusach Sefard) and Bay 24 (Ashkenaz) say the exact
+// same sequence — the only rite where it differs is Sefard Ari, which
+// neither shul follows — so one shared table serves both boards.
+const HOSHANA_TABLE = {
+    1: ["למען אמתך", "אבן שתיה", "אערוך שועי", "אום אני חומה", "אל למושעות", "אום נצורה"],  // Sukkot day 1 = Monday
+    2: ["למען אמתך", "אבן שתיה", "אערוך שועי", "אל למושעות", "אום נצורה", "אדון המושיע"],   // Sukkot day 1 = Tuesday
+    4: ["למען אמתך", "אבן שתיה", "אום נצורה", "אערוך שועי", "אל למושעות", "אדון המושיע"],   // Sukkot day 1 = Thursday
+    6: ["אום נצורה", "למען אמתך", "אערוך שועי", "אבן שתיה", "אל למושעות", "אדון המושיע"]    // Sukkot day 1 = Shabbat
+};
+
+function getHoshanaText(todayIso, cSecNow, alosSec, minchaGedolahSec) {
     let entry = schedule[todayIso];
     if (!entry || !entry.heb) return "";
     if (getHebMonthOnly(entry.heb) !== "תשרי") return "";
@@ -690,22 +700,12 @@ function getHoshanaText(todayIso, cSecNow, alosSec, minchaGedolahSec, isSefard) 
     if (day < 15 || day > 20) return "";
     if (cSecNow < alosSec || cSecNow >= minchaGedolahSec) return "";
 
-    let todayDate = new Date(todayIso + 'T00:00:00');
-    if (todayDate.getDay() === 6) return "אום נצורה";
+    let sukkotDayNum = day - 14; // 1-6
+    let tishrei15Iso = getIsoMinusDays(todayIso, sukkotDayNum - 1);
+    let startDow = new Date(tishrei15Iso + 'T00:00:00').getDay();
 
-    let nonShabbatCount = 0;
-    for (let offset = 0; offset <= (day - 15); offset++) {
-        let d = new Date(todayDate.getTime() - offset * 86400000);
-        if (d.getDay() !== 6) nonShabbatCount++;
-    }
-
-    let bigThree = isSefard
-        ? ["אום נצורה", "למען אמיתך", "אבן שתיה"]
-        : ["למען אמיתך", "אבן שתיה", "אום נצורה"];
-    if (nonShabbatCount <= 3) return bigThree[nonShabbatCount - 1];
-    if (nonShabbatCount === 4) return "אערוך שועי";
-    if (nonShabbatCount === 5) return "אל למושעות";
-    return "";
+    let seq = HOSHANA_TABLE[startDow];
+    return seq ? (seq[sukkotDayNum - 1] || "") : "";
 }
 
 function fit(el, vhStart) {
@@ -1365,7 +1365,7 @@ function updateUI() {
     if (isLedavidActive(todayIsoForSeason, cSec)) seasonPills.push("לדוד ה' אורי");
     if (isShofarActive(todayIsoForSeason, cSec, isShab)) seasonPills.push("שופר");
     if (isSelichotActive(todayIsoForSeason, cSec, isShab, isYomTov)) seasonPills.push("סליחות");
-    let hoshanaText = getHoshanaText(todayIsoForSeason, cSec, getSec(dToday.z[0], false), getSec(dToday.z[7], true), true);
+    let hoshanaText = getHoshanaText(todayIsoForSeason, cSec, getSec(dToday.z[0], false), getSec(dToday.z[7], true));
     if (hoshanaText) seasonPills.push(hoshanaText);
     let seasonLine = seasonPills.length
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
