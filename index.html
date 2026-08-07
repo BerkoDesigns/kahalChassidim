@@ -708,6 +708,28 @@ function getHoshanaText(todayIso, cSecNow, alosSec, minchaGedolahSec) {
     return seq ? (seq[sukkotDayNum - 1] || "") : "";
 }
 
+// על הנסים — active all day, every day, for the full 8 days of Chanukah
+// (reusing the same Kislev-25 ISO-offset anchor as the no-Tachanun check,
+// since Chanukah spans into Tevet) and on Purim only — 14 Adar (or 14
+// Adar Sheni in a leap year) — NOT Shushan Purim (15) and NOT Purim Katan
+// (Adar Rishon), since Al Hanissim isn't said on either of those. No
+// active-window restriction (unlike Hoshanot) — shown the entire day.
+function getAlHanissimText(todayIso) {
+    let entry = schedule[todayIso];
+    if (!entry || !entry.heb) return "";
+    let month = getHebMonthOnly(entry.heb);
+    let day = extractHebDay(entry.heb);
+
+    if ((month === "אדר" || month === "אדר-ב") && day === 14) return "על הנסים";
+
+    let k25 = findKislev25Iso(todayIso);
+    if (k25) {
+        let diffDays = (new Date(todayIso).getTime() - new Date(k25).getTime()) / 86400000;
+        if (diffDays >= 0 && diffDays <= 7) return "על הנסים";
+    }
+    return "";
+}
+
 function fit(el, vhStart) {
     if (!el) return;
     let p = el.parentElement;
@@ -1367,6 +1389,8 @@ function updateUI() {
     if (isSelichotActive(todayIsoForSeason, cSec, isShab, isYomTov)) seasonPills.push("סליחות");
     let hoshanaText = getHoshanaText(todayIsoForSeason, cSec, getSec(dToday.z[0], false), getSec(dToday.z[7], true));
     if (hoshanaText) seasonPills.push(hoshanaText);
+    let alHanissimText = getAlHanissimText(todayIsoForSeason);
+    if (alHanissimText) seasonPills.push(alHanissimText);
     let seasonLine = seasonPills.length
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
         : "";
