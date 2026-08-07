@@ -393,7 +393,7 @@ const OMER_STRINGS = {
 
 const DAY_MAP = {
   "Sun":"יום ראשון","Mon":"יום שני","Tue":"יום שלישי","Wed":"יום רביעי",
-  "Thu":"יום חמישי","Fri":"ערב ש\"ק","Sha":"שבת קודש","Sat":"שבת קודש"
+  "Thu":"יום חמישי","Fri":"יום ששי","Sha":"שבת קודש","Sat":"שבת קודש"
 };
 
 const DAY_NAMES = {
@@ -482,6 +482,25 @@ function findKislev25Iso(todayIso) {
     return null;
 }
 
+// ── NIGHTFALL-TRIGGER MECHANISM ─────────────────────────────────────
+// Any day that (a) is NOT Yom Tov but (b) still has a real halachic start
+// at nightfall falls through the general dIso flip's dawn-only fallback
+// (which only flips BACKWARD to "still yesterday" before Alos, never
+// forward early) — same root cause Rosh Chodesh needed its own dedicated
+// isErevRC fix for, which stays separate and untouched below (it has its
+// own extra complexity: can be 1 or 2 days, its own Friday-RC handling
+// elsewhere).
+//
+// Driven directly off the sheet's own Column D (holidayText) rather than a
+// hardcoded date list — any day the sheet names in Column D gets the
+// evening-before treatment automatically (confirmed with the user this
+// includes the four minor fast days too — their names are called out the
+// evening before same as everything else, even though the fast itself
+// doesn't start until that morning's Alos). This means a new holiday the
+// user adds to the sheet just works, with zero code changes here ever
+// again. The only exclusions are Yom Tov (already has its own correct
+// candle-lighting flip) and Rosh Chodesh (its own separate, more complex
+// mechanism above).
 function isBayswaterNoTachanunDay(heb, todayIso) {
     if (!heb) return false;
     let month = getHebMonthOnly(heb);
@@ -1339,8 +1358,25 @@ function updateUI() {
         // instead of falling back to the default message.
         let isErevRC       = tomorrowIsRC && cSec >= rochCutoff;
 
+        // General nightfall-trigger — covers Purim + all 8 nights of
+        // Chanukah (see NIGHTFALL_TRIGGER_MATCHERS above for the full list
+        // and why RC stays separate).
+        // Column D (holidayText) itself is the trigger — see the
+        // NIGHTFALL-TRIGGER comment above isBayswaterNoTachanunDay for why
+        // this is data-driven rather than a hardcoded date list. Excludes
+        // Yom Tov (own flip already correct) and RC (handled above).
+        let isErevNightfallHoliday = dTomorrow && (dTomorrow.holidayText || "").trim() !== ""
+            && dTomorrow.yomtov !== "Y" && !tomorrowIsRC && cSec >= rochCutoff;
+
         if (isErevRC) {
             head = dTomorrow.holidayText; sub = "הלל, יעלה ויבא"; cls = "teal-box";
+            showDefaultBlessingExtra = true;
+        } else if (isErevNightfallHoliday) {
+            // Blank sub for this evening-before window on both Purim and
+            // Chanukah — Purim/Shushan Purim never show Tachanun text at
+            // all (see below); Chanukah's own "אין אומרים תחנון" still
+            // shows normally once the day itself actually arrives.
+            head = dTomorrow.holidayText; sub = ""; cls = "teal-box";
             showDefaultBlessingExtra = true;
         } else if (onRCDay && cSec < rochCutoff) {
             head = rcHeadText; sub = "הלל, יעלה ויבא"; cls = "teal-box";
@@ -1349,9 +1385,10 @@ function updateUI() {
             // Holiday text before RT (RULE 4, RULE 8) - but NOT Rosh Chodesh (already caught above)
             // Guard against tR happening to equal hText itself (e.g. אסרו
             // חג, where the holiday name and Tachanun-reason default resolve
-            // to the same string).
+            // to the same string). Purim/Shushan Purim also blank the sub —
+            // same no-Tachanun-text-shown rule as isErevNightfallHoliday above.
             head = hText; 
-            sub = (tR === hText) ? "" : tR; 
+            sub = (tR === hText || hText.includes("פורים")) ? "" : tR; 
             cls = "teal-box";
             showDefaultBlessingExtra = true;
         } else if (tR !== "" && !isPastRTMinus25) {
