@@ -671,7 +671,14 @@ function isShofarActive(todayIso, cSecNow, isShabNow) {
     if (!elulEveIso || !roshHashanahIso) return false;
     if (!isPastEveningTrigger(elulEveIso, todayIso, cSecNow, 20)) return false; // Bayswater: 20 min
     let shofarEndIso = getIsoMinusDays(roshHashanahIso, 2); // stops 2 days before RH
-    return todayIso <= shofarEndIso;
+    if (todayIso > shofarEndIso) return false;
+    // Shofar is never blown at night — only Alos through Plag Hamincha, every
+    // day of the season. The evening-before trigger above still controls
+    // which calendar day counts as "in season," but visibility itself is
+    // gated fresh each day by this window regardless of that.
+    let entry = schedule[todayIso];
+    if (!entry || !entry.z) return false;
+    return cSecNow >= getSec(entry.z[0], false) && cSecNow < getSec(entry.z[8], true);
 }
 
 function isSelichotActive(todayIso, cSecNow, isShabNow, isYomTovNow) {
@@ -1683,4 +1690,3 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
-
