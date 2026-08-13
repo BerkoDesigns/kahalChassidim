@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <title>Bayswater Master Board - COMPLETE v3.5</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<script>
+// Chrome-compatible test panel loader — visiting the board with ?test=1
+// (or #test=1) appended auto-loads mobile_date_tester.js. Chrome on
+// Android blocks javascript: bookmarklets outright, so a plain query
+// string is the reliable way to trigger this from a bookmark on any
+// browser. Completely inert otherwise — does nothing on a normal visit.
+if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') !== -1) {
+  var _testScript = document.createElement('script');
+  _testScript.src = 'mobile_date_tester.js?' + Date.now();
+  document.head.appendChild(_testScript);
+}
+</script>
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <style>
@@ -826,7 +838,12 @@ function fitUnifiedStatusBox(container, vhStart) {
         if (head) head.style.fontSize = u + "vh";
         if (sub) sub.style.fontSize = (u * 0.65) + "vh";
         if (klText) klText.style.fontSize = (u * 0.55) + "vh";
-        pills.forEach(p => p.style.fontSize = (u * 0.45) + "vh");
+        // Pills used to size smaller (0.45) than every other sub-line —
+        // now match the same 0.65 ratio as sub/geshem-tal/default-blessing,
+        // so whatever combination of lines is showing (2, 3, or 4 of them)
+        // they all share equally rather than pills looking like an
+        // afterthought next to full-size text.
+        pills.forEach(p => p.style.fontSize = (u * 0.65) + "vh");
         if (geshemTalDemoted) geshemTalDemoted.style.fontSize = (u * 0.65) + "vh";
         if (defaultBlessingDemoted) defaultBlessingDemoted.style.fontSize = (u * 0.65) + "vh";
     }
@@ -1714,3 +1731,4 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
+
