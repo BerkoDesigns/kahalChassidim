@@ -111,6 +111,32 @@
   goBtn.onclick = jumpToCustom;
   panel.appendChild(goBtn);
 
+  // Day-stepper — shifts whatever's currently active (typed date/time, or
+  // real time if nothing's been set yet) by exactly 24 hours, keeping the
+  // same time of day, and updates the date box to match so repeated
+  // taps keep walking forward/backward correctly.
+  function shiftDay(deltaDays) {
+    var base = (FAKE_START !== null) ? FAKE_START : REAL_START;
+    var shifted = new RealDate(base);
+    shifted.setDate(shifted.getDate() + deltaDays); // calendar-day math, DST-safe
+    FAKE_START = shifted.getTime();
+    dateInput.value = (shifted.getMonth() + 1) + '/' + shifted.getDate() + '/' + shifted.getFullYear();
+    render();
+  }
+  var stepRow = document.createElement('div');
+  stepRow.style.cssText = 'display:flex;gap:4px;margin-bottom:6px;';
+  var prevDayBtn = document.createElement('button');
+  prevDayBtn.textContent = '◀ −1 DAY';
+  prevDayBtn.style.cssText = 'flex:1;padding:8px 0;background:rgba(45,90,61,0.8);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;';
+  prevDayBtn.onclick = function() { shiftDay(-1); };
+  var nextDayBtn = document.createElement('button');
+  nextDayBtn.textContent = '+1 DAY ▶';
+  nextDayBtn.style.cssText = 'flex:1;padding:8px 0;background:rgba(45,90,61,0.8);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;';
+  nextDayBtn.onclick = function() { shiftDay(1); };
+  stepRow.appendChild(prevDayBtn);
+  stepRow.appendChild(nextDayBtn);
+  panel.appendChild(stepRow);
+
   var resetBtn = document.createElement('button');
   resetBtn.textContent = '↺ REAL TIME';
   resetBtn.style.cssText = 'width:100%;padding:8px;background:rgba(192,57,43,0.8);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;';
