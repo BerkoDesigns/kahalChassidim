@@ -876,21 +876,6 @@ function fitUnifiedStatusBox(container, vhStart) {
 
     let unit = vhStart;
     applyUnit(unit);
-    // Grow UP first to fill available space — previously shrink-only, so
-    // content that already fit at vhStart just sat there small with unused
-    // space around it (exactly what the synagogue photo showed: head large,
-    // everything else small with gaps, since sub/pills/bottom-line never
-    // got a chance to grow toward the same room the head already has).
-    // Capped well above vhStart so a single-line day (head alone) doesn't
-    // balloon to something absurd — this is specifically for when there
-    // ARE extra blocks that deserve to fill the space, not to override the
-    // separate 6.2-vs-8.5 vhStart choice made by the caller.
-    const unitMax = vhStart + 4.0;
-    while (container.scrollHeight < container.clientHeight && unit < unitMax) {
-        unit += 0.15;
-        applyUnit(unit);
-    }
-    // Shrink back down if that overshot
     while (container.scrollHeight > container.clientHeight && unit > 1.0) {
         unit = Math.max(1.0, unit - 0.15);
         applyUnit(unit);
