@@ -864,6 +864,14 @@ function fitUnifiedStatusBox(container, vhStart) {
         pills.forEach(p => p.style.fontSize = (u * 0.65) + "vh");
         if (geshemTalDemoted) geshemTalDemoted.style.fontSize = (u * 0.65) + "vh";
         if (defaultBlessingDemoted) defaultBlessingDemoted.style.fontSize = (u * 0.65) + "vh";
+        // Gap must shrink WITH the text, not stay fixed — a fixed gap (the
+        // CSS default) costs the same whether there are 2 blocks (1 gap) or
+        // 4 blocks (3 gaps + 3 dividers = 6 flex gaps total), so with more
+        // blocks stacked, a disproportionate share of the box went to
+        // spacing instead of text, forcing text far smaller than it needed
+        // to be. Tying gap to the same unit keeps the ratio consistent
+        // regardless of how many blocks are stacked.
+        container.style.gap = (u * 0.16) + "vh";
     }
 
     let unit = vhStart;
