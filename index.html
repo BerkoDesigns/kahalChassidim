@@ -159,6 +159,9 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     text-align: center; padding: 4px 10px;
+    gap: 1.0vh; /* uniform spacing between every block AND divider —
+                   replaces space-evenly, which treated dividers as their
+                   own flex items and compounded into uneven-looking gaps */
   }
   .teal-box { background: #e0f5f2; color: #1a5c52; }
   .gold-box  { color: var(--gold-dark); background: var(--box); }
@@ -317,6 +320,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
         <span class="z-time" id="z_spec_time">--:--</span>
       </div>
       <div class="z-row" id="r10"><span class="z-label">שקיעת החמה</span><span class="z-time" id="z10">--:--</span></div>
+      <div class="z-row" id="r-tzeit60"><span class="z-label">60 - שקיעה</span><span class="z-time" id="z-tzeit60">--:--</span></div>
       <div class="z-row" id="r11"><span class="z-label">רבינו תם</span><span class="z-time" id="z11">--:--</span></div>
     </div>
 
@@ -629,16 +633,30 @@ function isPastEveningTrigger(targetEveIso, todayIso, cSecNow, offsetMinutes) {
 
 function isLedavidActive(todayIso, cSecNow) {
     if (!elulEveIso) return false;
-    if (!isPastEveningTrigger(elulEveIso, todayIso, cSecNow, 20)) return false; // Bayswater: 20 min
-    if (!simchatTorahIso) return true; // end date not yet known — show anyway
-    if (todayIso < simchatTorahIso) return true;
-    if (todayIso === simchatTorahIso) {
-        // Ends 1 hour before RT on Simchat Torah itself
-        let entry = schedule[todayIso];
-        if (!entry || !entry.z) return true;
-        return cSecNow < (getSec(entry.z[10], true) - 3600);
+    if (!isPastEveningTrigger(elulEveIso, todayIso, cSecNow, 20)) return false; // Bayswater: 20 min season-start trigger
+    if (simchatTorahIso) {
+        if (todayIso > simchatTorahIso) return false;
+        if (todayIso === simchatTorahIso) {
+            // Ends 1 hour before RT on Simchat Torah itself
+            let entry = schedule[todayIso];
+            if (entry && entry.z && cSecNow >= (getSec(entry.z[10], true) - 3600)) return false;
+        }
     }
-    return false;
+    // Never at night — off from 20 min before RT until Alos the next
+    // morning, every single night of the season (Bayswater-specific rule;
+    // note this coincides with the season-START trigger's own 20-min-
+    // before-RT moment on elulEveIso itself, so the pill's season
+    // technically "starts" that evening but doesn't actually become
+    // visible until the following morning's Alos — same practical effect
+    // as שופר's Alos-Plag gate, just expressed as a single off-window
+    // instead of an on-window).
+    let entry = schedule[todayIso];
+    if (entry && entry.z) {
+        let alosSec = getSec(entry.z[0], false);
+        let nightStartSec = getSec(entry.z[10], true) - 1200; // RT - 20 min
+        if (cSecNow >= nightStartSec || cSecNow < alosSec) return false;
+    }
+    return true;
 }
 
 // מוריד הגשם — always visible (every day, Shabbos/Yom Tov included), unlike
@@ -1059,7 +1077,15 @@ function updateUI() {
     } else if (now.getDay() === 5 || (tomorrowIsYomTovForFlip && !todayIsYomTovForFlip)) {
         dIso = (candleSecsForFlip > 0 && cSec >= candleSecsForFlip) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
     } else {
-        dIso = (cSec < getSec(dToday.z[0], false)) ? getIso(new Date(now.getTime() - 86400000)) : getIso(now);
+        // Ordinary weekday: the Hebrew day itself changes at RT (72 min),
+        // not at dawn — flips forward the evening before, same as every
+        // other RT-based boundary already used elsewhere. This replaces
+        // the old dawn-only fallback, which only ever flipped BACKWARD to
+        // "still yesterday" before Alos and never flipped forward early —
+        // that old backward check is now redundant: by the time a new
+        // day's Alos would matter, the flip already happened at RT the
+        // previous evening.
+        dIso = (cSec >= rtSecs) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
     }
     let dOmer  = schedule[oIso] || dToday;
     let dDate  = schedule[dIso] || dToday;
@@ -1073,6 +1099,11 @@ function updateUI() {
             let bt = dDate.z[i-1];
             $('z'+i).innerHTML = fmtZman((i === 11) ? shiftTime(bt, 2) : bt);
         }
+        // צאת הכוכבים (60) — Bayswater only. Always exactly 12 minutes
+        // before the DISPLAYED RT time (which itself already has a +2 min
+        // buffer baked in via shiftTime(bt, 2) above) — net -10 min off
+        // the raw z[10] value.
+        $('z-tzeit60').innerHTML = fmtZman(shiftTime(dDate.z[10], -10));
     }
 
     // RULE 11: Candle lighting
@@ -1391,7 +1422,16 @@ function updateUI() {
         let civilTodayIsRC = (dToday.holidayText || "").includes("ראש חודש");
         let onRCDay        = todayIsRC || civilTodayIsRC;
         let rcHeadText     = todayIsRC ? hText : (dToday.holidayText || "ראש חודש");
-        let dTomorrow      = schedule[getIso(new Date(new Date(dIso + 'T00:00:00').getTime() + 86400000))];
+        // FIX: "tomorrow" here must be relative to the REAL civil date
+        // (now), not dIso. Before item 3's fix, dIso never flipped forward
+        // early on ordinary days, so dIso+1 was always safe. Now that dIso
+        // DOES flip forward at RT, using dIso+1 here double-counted the
+        // flip: once RT passed, dIso already equaled tomorrow, so dIso+1
+        // overshot to the day after — breaking isErevRC/nightfall-trigger
+        // for the entire RT-to-midnight window every single night. Using
+        // now+1 always means "the actual next calendar day," regardless of
+        // whether dIso has already flipped.
+        let dTomorrow      = schedule[getIso(new Date(now.getTime() + 86400000))];
         let tomorrowIsRC   = dTomorrow && (dTomorrow.holidayText || "").includes("ראש חודש");
         // Dropped the old "&& !onRCDay" guard: today-is-RC AND tomorrow-is-RC
         // can only mean today is day 1 of a 2-day RC (RC is never 3+ days),
@@ -1486,6 +1526,16 @@ function updateUI() {
     if (hoshanaText) seasonPills.push(hoshanaText);
     let alHanissimText = getAlHanissimText(todayIsoForSeason, cSec, 1200); // Bayswater: 20 min before RT
     if (alHanissimText) seasonPills.push(alHanissimText);
+    // עשי"ת — first night of Rosh Hashana through the end of Yom Kippur.
+    // Uses dIso (the flipped logical day), not todayIsoForSeason — RH's own
+    // Yom-Tov flip already correctly shows RH starting the evening before,
+    // and YK's own exit (RT-based, see the dIso else-branch above) ends
+    // this range right at YK's own RT — no separate evening-trigger needed
+    // for either boundary. המלך הקדוש every day of the period, including
+    // Shabbos/Yom Tov; המלך המשפט weekdays only.
+    let inAseresYemeiTeshuva = roshHashanahIso && yomKippurIso && dIso >= roshHashanahIso && dIso <= yomKippurIso;
+    if (inAseresYemeiTeshuva) seasonPills.push("המלך הקדוש");
+    if (inAseresYemeiTeshuva && !isShab && !isYomTov) seasonPills.push("המלך המשפט");
     let seasonLine = seasonPills.length
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
         : "";
@@ -1536,7 +1586,10 @@ function updateUI() {
     if (demotedGeshemLine) statusBlocks.push(demotedGeshemLine);
     if (defaultBlessingLine) statusBlocks.push(defaultBlessingLine);
     let textSep = '<div class="text-sep"></div>';
-    let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}">${statusBlocks.join(textSep)}</div>`;
+    // Always centered with a uniform gap now (CSS handles it) — no more
+    // space-evenly, which stretched dividers+blocks unevenly across the
+    // box's full height as separate flex items.
+    let sH = `<div class="message-box ${cls}">${statusBlocks.join(textSep)}</div>`;
     if (sH !== currentStatusHTML) {
         $('LEFT_MSG').innerHTML = sH; 
         currentStatusHTML = sH;
@@ -1557,6 +1610,9 @@ if (tefTitle) {
     // Active zman highlight
     let zT = []; 
     for (let i=1; i<=11; i++) zT.push({id:'r'+i, sec: getSec(dDate.z[i-1], i>=7)});
+    // צאת הכוכבים (60) inserted between r10 (Shkiah) and r11 (RT) — always
+    // chronologically there since it's a fixed 12 min before RT.
+    zT.splice(10, 0, {id: 'r-tzeit60', sec: getSec(dDate.z[10], true) - 600});
     let nIdx = zT.findIndex(z => z.sec > cSec), tgtId = nIdx !== -1 ? zT[nIdx].id : null;
     if (tgtId !== currentlyHighlightedId) {
         allZRows.forEach(r => r.classList.remove('active-zman'));
@@ -1731,4 +1787,3 @@ setInterval(() => checkAndCapture(false), 60000);
 </script>
 </body>
 </html>
-
