@@ -175,14 +175,10 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
   .default-blessing-demoted { color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
   .text-sep { width: 55%; height: 1px; background: rgba(0,0,0,0.28); margin: 1px 0; flex-shrink: 0; }
   #status-kl {
-    display: inline-block; background: #F5F0E8;
-    border: 3px solid #c0392b; border-radius: 10px;
-    padding: 4px 16px; margin-top: 4px;
-  }
-  #status-kl-text {
-    font-size: 4.0vh; color: #ffffff; font-weight: 800;
-    background: #c0392b; border-radius: 6px;
-    padding: 2px 12px; display: inline-block;
+    font-family: 'Assistant', sans-serif; font-weight: 700;
+    background: #c0392b; border: 1px solid var(--gold-dark); color: #ffffff;
+    border-radius: 20px; padding: 2px 10px;
+    display: inline-block; margin-top: 4px;
   }
   .main-body { height: 70vh; display: flex; gap: 10px; overflow: hidden; }
   .zemanim-col {
@@ -842,27 +838,31 @@ function fitGroupInBox(els, container, vhStart) {
 // wrapped pill bleeding past the edge) that scrollHeight alone would miss.
 function fitStatusBoxToFill(container) {
     if (!container) return;
-    const SEL_TEXT  = '#status-head, [id="status-sub"], .season-pill, #status-kl-text, .geshem-tal-demoted, .default-blessing-demoted';
-    const SEL_BLOCK = '#status-head, [id="status-sub"], .season-pill, #status-kl, .geshem-tal-demoted, .default-blessing-demoted';
-    let textEls = Array.from(container.querySelectorAll(SEL_TEXT));
+    // KL badge is now a single element (matches the pills), so one
+    // selector covers both text-sizing and containment checks.
+    const SEL = '#status-head, [id="status-sub"], .season-pill, #status-kl, .geshem-tal-demoted, .default-blessing-demoted';
+    let textEls = Array.from(container.querySelectorAll(SEL));
     if (!textEls.length) return;
 
     function applySize(vh) {
         textEls.forEach(el => el.style.fontSize = vh + "vh");
     }
 
+    // SAFETY is a real pixel buffer (not subpixel rounding tolerance) —
+    // guarantees actual headroom on every side so ordinary rendering
+    // differences between browsers/devices can never tip a "fits" result
+    // into visible overflow on the real board, the way a razor-thin
+    // (<0.2px) margin did before.
+    const SAFETY = 2.0;
     function fits() {
         const cRect = container.getBoundingClientRect();
-        const EPS = 0.3; // px tolerance for subpixel rounding
-        if (container.scrollHeight > container.clientHeight + EPS) return false;
-        if (container.scrollWidth  > container.clientWidth  + EPS) return false;
-        const blocks = container.querySelectorAll(SEL_BLOCK);
+        const blocks = container.querySelectorAll(SEL);
         for (const el of blocks) {
             const r = el.getBoundingClientRect();
-            if (r.right  > cRect.right  + EPS) return false;
-            if (r.bottom > cRect.bottom + EPS) return false;
-            if (r.left   < cRect.left   - EPS) return false;
-            if (r.top    < cRect.top    - EPS) return false;
+            if (r.right  > cRect.right  - SAFETY) return false;
+            if (r.bottom > cRect.bottom - SAFETY) return false;
+            if (r.left   < cRect.left   + SAFETY) return false;
+            if (r.top    < cRect.top    + SAFETY) return false;
         }
         return true;
     }
@@ -1518,7 +1518,7 @@ function updateUI() {
 
     // RULE 10: KIDDUSH LEVANA
     let showKL = getKiddushLevana(now, dDate.heb || "", isShab, hText, dayW, cSec, getSec(dToday.z[0], false), getSec(dDate.z[9], true));
-    let klLine = showKL ? `<span id="status-kl"><span id="status-kl-text">קידוש לבנה</span></span>` : "";
+    let klLine = showKL ? `<span id="status-kl">קידוש לבנה</span>` : "";
 
     // Elul season — stacks as extra pills alongside whatever the box is
     // already showing, never replacing it. Independent of the priority
