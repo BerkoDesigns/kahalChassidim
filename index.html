@@ -165,7 +165,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
   /* Elul season lines (לדוד ה' אורי / שופר / סליחות) — compact pills */
   .season-line { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
   .season-pill {
-    font-family: 'Assistant', sans-serif; font-weight: 700; font-size: 2.6vh;
+    font-size: 2.6vh;
     background: #ffffffaa; border: 1px solid var(--gold-dark); color: var(--gold-dark);
     border-radius: 20px; padding: 2px 10px;
   }
@@ -175,7 +175,6 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
   .default-blessing-demoted { color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
   .text-sep { width: 55%; height: 1px; background: rgba(0,0,0,0.28); margin: 1px 0; flex-shrink: 0; }
   #status-kl {
-    font-family: 'Assistant', sans-serif; font-weight: 700;
     background: #c0392b; border: 1px solid var(--gold-dark); color: #ffffff;
     border-radius: 20px; padding: 2px 10px;
     display: inline-block; margin-top: 4px;
@@ -838,6 +837,12 @@ function fitGroupInBox(els, container, vhStart) {
 // wrapped pill bleeding past the edge) that scrollHeight alone would miss.
 function fitStatusBoxToFill(container) {
     if (!container) return;
+    // Wait for webfonts to actually be ready before measuring — if
+    // 'Suez One'/'Assistant' haven't finished loading yet, measuring
+    // against fallback-font metrics would lock in a size that no longer
+    // matches once the real font swaps in. Resolves immediately once
+    // fonts are already loaded (the normal case on every re-render).
+    document.fonts.ready.then(() => {
     // KL badge is now a single element (matches the pills), so one
     // selector covers both text-sizing and containment checks.
     const SEL = '#status-head, [id="status-sub"], .season-pill, #status-kl, .geshem-tal-demoted, .default-blessing-demoted';
@@ -878,6 +883,7 @@ function fitStatusBoxToFill(container) {
         if (fits()) { best = mid; lo = mid; } else { hi = mid; }
     }
     applySize(best);
+    });
 }
 
 // Expand UP to fill available space (for molad & summer messages)
@@ -1578,13 +1584,11 @@ function updateUI() {
         defaultBlessingLine = `<span class="default-blessing-demoted">${defaultBlessingText}</span>`;
     }
 
-    let hasExtra = sub || showKL || seasonPills.length > 0 || geshemTalText || defaultBlessingLine;
-    let headSize = hasExtra ? 6.2 : 8.5;
     // Build the box as a list of present blocks, joined with a thin divider
     // between each — so whether it's 2 texts (head+sub) or 3 (head+sub+pills),
     // people can tell at a glance they're separate pieces of information.
     let statusBlocks = [];
-    statusBlocks.push(`<span id="status-head" style="font-size:${headSize}vh">${displayHead}</span>`);
+    statusBlocks.push(`<span id="status-head">${displayHead}</span>`);
     if (demotedDefaultLine) statusBlocks.push(demotedDefaultLine);
     if (sub) statusBlocks.push(`<span id="status-sub">${sub}</span>`);
     if (klLine) statusBlocks.push(klLine);
@@ -1592,10 +1596,9 @@ function updateUI() {
     if (demotedGeshemLine) statusBlocks.push(demotedGeshemLine);
     if (defaultBlessingLine) statusBlocks.push(defaultBlessingLine);
     let textSep = '<div class="text-sep"></div>';
-    // Always centered with a uniform gap now (CSS handles it) — no more
-    // space-evenly, which stretched dividers+blocks unevenly across the
-    // box's full height as separate flex items.
-    let sH = `<div class="message-box ${cls}" style="justify-content:${hasExtra ? 'space-evenly' : 'center'}">${statusBlocks.join(textSep)}</div>`;
+    // Always centered — fitStatusBoxToFill handles making everything fill
+    // the space, so the container itself just centers the block as a whole.
+    let sH = `<div class="message-box ${cls}">${statusBlocks.join(textSep)}</div>`;
     if (sH !== currentStatusHTML) {
         $('LEFT_MSG').innerHTML = sH; 
         currentStatusHTML = sH;
