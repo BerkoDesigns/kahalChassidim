@@ -173,6 +173,14 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
   #status-sub  { font-size: 3.2vh; color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
   .geshem-tal-text { color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
   .default-blessing-demoted { color: #000; display: block; width: 100%; white-space: normal; line-height: 1.0; }
+  .teal-accent { color: #1a5c52; }
+  /* Short vertical mark for a mid-line separator (e.g. geshem/tal combined
+     with the default blessing) — deliberately NOT the same as .text-sep
+     (which divides whole blocks); this one sits inline within a single
+     line of text, so it must stay visually short even as that line's
+     shared font-size grows, rather than stretching to full text height
+     like a plain "│" character would. */
+  .mid-divider { font-size: 0.55em; vertical-align: middle; margin: 0 0.3em; color: inherit; }
   .text-sep { width: 55%; height: 1px; background: rgba(0,0,0,0.28); margin: 1px 0; flex-shrink: 0; }
   #status-kl {
     background: #c0392b; border: 1px solid var(--gold-dark); color: #ffffff;
@@ -535,6 +543,66 @@ function isBayswaterNoTachanunDay(heb, todayIso) {
     return false;
 }
 
+// ── TZIDKATCHA (אין אומרים צדקתך) — Shabbat Mincha only ─────────────
+// Two genuinely distinct rule categories, per posek-reviewed correction
+// (Aug 2026) to the original single-list version — do not collapse these
+// back into one "is it a no-Tachanun day" check:
+//
+// PART A — Shabbat itself is a day on which Tachanun would be skipped:
+// Tzidkatcha is omitted outright, independent of what Sunday is. This is
+// the FULL no-Tachanun scope (all 8 days of Chanukah, not just day 1).
+//
+// PART B — Shabbat itself is ordinary, but the upcoming Sunday is a
+// no-Tachanun day: Tzidkatcha is STILL omitted for most such Sundays, but
+// NOT for two explicit, deliberately-coded exceptions:
+//   - Pesach Sheni on Sunday → Tzidkatcha IS said (Ashkenazic Luach Eretz
+//     Yisrael; genuine minhag variation exists, this board follows that).
+//   - Tisha B'Av on Sunday → Tzidkatcha IS said (aveilus day, not simcha —
+//     the opposite of every other entry on this list).
+// These two are deliberately absent from Part B below — do not add them.
+// Identical spec to Chesed V'Emes's copy of this function.
+function isTzidkatchaOmittedShabbat(todayHeb, todayHolidayText, tomorrowHeb, tomorrowHolidayText, todayIso) {
+    let todayMonth = getHebMonthOnly(todayHeb);
+    let todayDay = extractHebDay(todayHeb);
+
+    // ── PART A: today (Shabbat) itself ──
+    if ((todayHolidayText || "").includes("ראש חודש")) return true;             // Rosh Chodesh
+    let k25 = findKislev25Iso(todayIso);
+    if (k25) {
+        let diffDays = (new Date(todayIso).getTime() - new Date(k25).getTime()) / 86400000;
+        if (diffDays >= 0 && diffDays <= 7) return true;                        // Any day of Chanukah
+    }
+    if ((todayMonth === "אדר" || todayMonth === "אדר-ב") && (todayDay === 14 || todayDay === 15)) return true; // Purim/Shushan Purim
+    if (todayMonth === "אדר-א" && (todayDay === 14 || todayDay === 15)) return true; // Purim Katan/Shushan Purim Katan
+    if (todayMonth === "שבט" && todayDay === 15) return true;                   // Tu B'Shvat
+    if (todayMonth === "ניסן") return true;                                     // Entire Nisan
+    if (todayMonth === "סיון" && todayDay >= 8 && todayDay <= 12) return true;   // Day after Shavuot – 12 Sivan
+    if (todayMonth === "תשרי" && todayDay >= 14 && todayDay <= 24) return true;  // Erev Sukkot – day after Simchat Torah
+    if (todayMonth === "אייר" && todayDay === 18) return true;                  // Lag Ba'omer
+    if (todayMonth === "אייר" && todayDay === 14) return true;                  // Pesach Sheni (Shabbat-itself — Part A, unlike Part B below)
+    if (todayMonth === "אב" && todayDay === 15) return true;                    // Tu B'Av
+    if (roshHashanahIso && yomKippurIso && todayIso > roshHashanahIso && todayIso < yomKippurIso) return true; // Shabbat Shuvah
+
+    // ── PART B: upcoming Sunday — Tisha B'Av deliberately excluded (source-
+    // confirmed: Sunday=Tisha B'Av → Tzidkatcha IS said on the preceding
+    // Shabbat, aveilus day, not simcha). Pesach Sheni is NOT excluded here
+    // — per the printed source's general rule (Shabbat before any
+    // no-Tachanun day → no Tzidkatcha, with only Erev RH/YK as the named
+    // exception), Sunday=Pesach Sheni is an ordinary trigger like the rest.
+    let sunMonth = getHebMonthOnly(tomorrowHeb);
+    let sunDay = extractHebDay(tomorrowHeb);
+    if ((tomorrowHolidayText || "").includes("ראש חודש")) return true;          // Rosh Chodesh
+    if (sunMonth === "כסלו" && sunDay === 25) return true;                      // Chanukah — day 1 only
+    if ((sunMonth === "אדר" || sunMonth === "אדר-ב") && (sunDay === 14 || sunDay === 15)) return true; // Purim/Shushan Purim
+    if (sunMonth === "אדר-א" && (sunDay === 14 || sunDay === 15)) return true;  // Purim Katan/Shushan Purim Katan
+    if (sunMonth === "שבט" && sunDay === 15) return true;                       // Tu B'Shvat
+    if (sunMonth === "אייר" && sunDay === 14) return true;                      // Pesach Sheni
+    if (sunMonth === "אייר" && sunDay === 18) return true;                      // Lag Ba'omer
+    if (sunMonth === "אב" && sunDay === 15) return true;                        // Tu B'Av
+
+    return false;
+}
+
 // Subtracts `days` from an ISO date string, returning a new ISO string.
 function getIsoMinusDays(iso, days) {
     let d = new Date(iso + 'T00:00:00');
@@ -686,6 +754,36 @@ function isTalActive(todayIso, cSecNow) {
         if (entry && entry.z) return cSecNow >= getSec(entry.z[7], true);
     }
     return false;
+}
+
+// מזמור שיר חנוכת הבית — all 8 days of Chanukah, Alos through Chatzot
+// Hayom, EVERY day including Shabbat — Bayswater/Kahal Chasidim is Sefard,
+// which says this every day of Chanukah with no Shabbat exclusion (unlike
+// Chesed V'Emes/Ashkenaz, whose copy of this function does exclude
+// Shabbat — the two are deliberately different, not a copy-paste slip).
+function isChanukatHabayitActive(todayIso, cSecNow, isShabNow) {
+    let k25 = findKislev25Iso(todayIso);
+    if (!k25) return false;
+    let diffDays = (new Date(todayIso).getTime() - new Date(k25).getTime()) / 86400000;
+    if (diffDays < 0 || diffDays > 7) return false; // any of the 8 days
+    let entry = schedule[todayIso];
+    if (!entry || !entry.z) return false;
+    return cSecNow >= getSec(entry.z[0], false) && cSecNow < getSec(entry.z[6], false); // Alos through Chatzot
+}
+
+// קריאת פרשת הנשיאים — Kahal Chassidim (Sefard) only, not on Chesed V'Emes.
+// 1–12 Nisan, Alos through Chatzot Hayom, every day including Shabbat —
+// same gate mechanism as this board's own Mizmor Shir Chanukat Habayit
+// above (no Shabbat exclusion, matching Sefard practice for this too).
+// Generic pill, not day-specific to which Nasi's section it is.
+function isParshatHanesiimActive(todayIso, cSecNow) {
+    let entry = schedule[todayIso];
+    if (!entry) return false;
+    let month = getHebMonthOnly(entry.heb || "");
+    let day = extractHebDay(entry.heb || "");
+    if (month !== "ניסן" || day < 1 || day > 12) return false;
+    if (!entry.z) return false;
+    return cSecNow >= getSec(entry.z[0], false) && cSecNow < getSec(entry.z[6], false); // Alos through Chatzot
 }
 
 function isShofarActive(todayIso, cSecNow, isShabNow) {
@@ -1242,7 +1340,7 @@ function updateUI() {
     // (Was missing on this board entirely — mirrors Chesed V'Emes exactly.)
     let hebStr = dDate.heb || "";
     let isPesach1ForTal = hebStr.includes("ניסן") && extractHebDay(hebStr) === 15;
-    let chatzotSecForTal = getSec(dDate.z[6], true);
+    let chatzotSecForTal = getSec(dDate.z[6], false);
     let pastChatzotForTal = (cSec >= chatzotSecForTal && chatzotSecForTal > 0);
 
     let civMonthForTal = now.getMonth() + 1;
@@ -1260,7 +1358,7 @@ function updateUI() {
     if (isPesach1ForTal && pastChatzotForTal) isTalUmatar = false;
     if (civMonthForTal >= 5 && civMonthForTal <= 11) isTalUmatar = false;
 
-    let head = "", sub = "", cls = "gold-box";
+    let head = "", sub = "", cls = "gold-box", rochDaysLine = "";
     // ותן ברכה/ותן טל ומטר is a Shemoneh Esrei insert, unrelated to
     // Tachanun — applies every weekday regardless of what else the box
     // shows. Set true inside the weekday branch below whenever something
@@ -1341,17 +1439,22 @@ function updateUI() {
             }
             
             if (isMevarchimDay || rochDays.length > 0) {
-                // This is Shabbat Mevarchim
-                let rochDisplay = "";
+                // This is Shabbat Mevarchim. "ראש חודש X" and the day-list
+                // ("יום Y") are deliberately separate lines/blocks now, not
+                // one combined string — a plain "│" between them used to
+                // scale up to full text height along with the shared sizing
+                // system, making the line look oversized. Splitting removes
+                // the need for that divider entirely; any remaining "│"
+                // between multiple day names still uses .mid-divider.
                 if (rochDays.length === 1) {
-                    rochDisplay = rochText + " │ " + rochDays[0];
+                    rochDaysLine = rochDays[0];
                 } else if (rochDays.length === 2) {
-                    rochDisplay = rochText + " │ " + rochDays[0] + " │ ו" + rochDays[1];
+                    rochDaysLine = rochDays[0] + '<span class="mid-divider">│</span>ו' + rochDays[1];
                 } else if (rochDays.length > 2) {
-                    rochDisplay = rochText + " │ " + rochDays.slice(0, -1).join(", ") + " │ ו" + rochDays[rochDays.length - 1];
+                    rochDaysLine = rochDays.slice(0, -1).join(", ") + '<span class="mid-divider">│</span>ו' + rochDays[rochDays.length - 1];
                 }
                 head = "שבת מברכים";
-                sub = rochDisplay || "";
+                sub = rochText || "";
                 cls = "teal-box";
             } else if (hText !== "") {
                 // Special Shabbos name (e.g. שבת נחמו) - promote to headline, matching Chesed V'Emes
@@ -1534,6 +1637,8 @@ function updateUI() {
     if (isLedavidActive(todayIsoForSeason, cSec)) seasonPills.push("לדוד ה' אורי");
     if (isShofarActive(todayIsoForSeason, cSec, isShab)) seasonPills.push("שופר");
     if (isSelichotActive(todayIsoForSeason, cSec, isShab, isYomTov)) seasonPills.push("סליחות");
+    if (isChanukatHabayitActive(todayIsoForSeason, cSec, isShab)) seasonPills.push("מזמור שיר חנוכת הבית");
+    if (isParshatHanesiimActive(todayIsoForSeason, cSec)) seasonPills.push("קריאת פרשת הנשיאים");
     let hoshanaText = getHoshanaText(todayIsoForSeason, cSec, getSec(dToday.z[0], false), getSec(dToday.z[7], true));
     if (hoshanaText) seasonPills.push(hoshanaText);
     let alHanissimText = getAlHanissimText(todayIsoForSeason, cSec, 1200); // Bayswater: 20 min before RT
@@ -1577,24 +1682,45 @@ function updateUI() {
     let defaultBlessingText = isTalUmatar ? "ותן טל ומטר" : "ותן ברכה";
     let demotedGeshemLine = "", defaultBlessingLine = "";
     if (!geshemPromoted && geshemTalText && showDefaultBlessingExtra) {
-        demotedGeshemLine = `<span class="geshem-tal-text geshem-tal-demoted">${geshemTalText} │ ${defaultBlessingText}</span>`;
+        demotedGeshemLine = `<span class="geshem-tal-text geshem-tal-demoted">${geshemTalText}<span class="mid-divider">│</span>${defaultBlessingText}</span>`;
     } else if (!geshemPromoted && geshemTalText) {
         demotedGeshemLine = `<span class="geshem-tal-text geshem-tal-demoted">${geshemTalText}</span>`;
     } else if (showDefaultBlessingExtra) {
         defaultBlessingLine = `<span class="default-blessing-demoted">${defaultBlessingText}</span>`;
     }
 
+    // Tzidkatcha — Shabbat Mincha only, from Mincha Gedolah onward; turns
+    // off automatically at Motzei Shabbos since isShab itself goes false
+    // then. Additive, same as the other demoted lines — never replaces
+    // anything else the box is showing.
+    let tzidkatchaLine = "";
+    if (isShab && cSec >= getSec(dToday.z[7], true)) {
+        let tomorrowIsoTz = getIso(new Date(now.getTime() + 86400000));
+        let tomorrowEntryTz = schedule[tomorrowIsoTz] || {};
+        let todayEntryTz = schedule[statusIso] || dDate;
+        if (isTzidkatchaOmittedShabbat(todayEntryTz.heb || "", todayEntryTz.holidayText || "", tomorrowEntryTz.heb || "", tomorrowEntryTz.holidayText || "", dIso)) {
+            tzidkatchaLine = `<span class="default-blessing-demoted teal-accent">אין אומרים צדקתך</span>`;
+        }
+    }
+
     // Build the box as a list of present blocks, joined with a thin divider
     // between each — so whether it's 2 texts (head+sub) or 3 (head+sub+pills),
     // people can tell at a glance they're separate pieces of information.
+    // חנוכה is highlighted in teal wherever it shows up in the head — this
+    // is a single centralized replace rather than touching every place
+    // `head`/displayHead gets built (RC combo text, evening-before display,
+    // etc.), so it catches all of them uniformly.
+    let displayHeadColored = displayHead.replace(/חנוכה/g, '<span class="teal-accent">חנוכה</span>');
     let statusBlocks = [];
-    statusBlocks.push(`<span id="status-head">${displayHead}</span>`);
+    statusBlocks.push(`<span id="status-head">${displayHeadColored}</span>`);
     if (demotedDefaultLine) statusBlocks.push(demotedDefaultLine);
     if (sub) statusBlocks.push(`<span id="status-sub">${sub}</span>`);
+    if (rochDaysLine) statusBlocks.push(`<span id="status-sub">${rochDaysLine}</span>`);
     if (klLine) statusBlocks.push(klLine);
     if (seasonLine) statusBlocks.push(seasonLine);
     if (demotedGeshemLine) statusBlocks.push(demotedGeshemLine);
     if (defaultBlessingLine) statusBlocks.push(defaultBlessingLine);
+    if (tzidkatchaLine) statusBlocks.push(tzidkatchaLine);
     let textSep = '<div class="text-sep"></div>';
     // Always centered — fitStatusBoxToFill handles making everything fill
     // the space, so the container itself just centers the block as a whole.
