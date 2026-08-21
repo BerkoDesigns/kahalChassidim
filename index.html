@@ -1811,17 +1811,29 @@ function updateUI() {
         let needsProbe = !!mergeCandidateText || !!geshemBlessingCandidate;
 
         if (needsProbe) {
-            // Pass 1 — nothing merged, real fit, real measurement of the
-            // actual rendered row count (including any pill wrap).
-            let sH1 = `<div class="message-box ${cls}">${buildBlocks(false, false).join(textSep)}</div>`;
-            $('LEFT_MSG').innerHTML = sH1;
-            let probeBox = $('LEFT_MSG').querySelector('.message-box');
+            // Pass 1 — measured in a DETACHED, offscreen element, never the
+            // real visible LEFT_MSG. Writing the unmerged probe HTML into
+            // the live box (even temporarily) was a real bug: the final
+            // write below is skipped whenever the decided HTML matches
+            // what's already cached (`sH !== currentStatusHTML`), which is
+            // exactly the common case on an unchanged status — so the
+            // probe's unmerged leftovers stayed on screen indefinitely,
+            // visible starting from the second render onward. An offscreen
+            // probe means the live box is only ever touched once below,
+            // with the final, correct answer.
+            let realRect = $('LEFT_MSG').getBoundingClientRect();
+            let probeContainer = document.createElement('div');
+            probeContainer.style.cssText = `position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:0; width:${realRect.width}px; height:${realRect.height}px;`;
+            document.body.appendChild(probeContainer);
+            probeContainer.innerHTML = `<div class="message-box ${cls}">${buildBlocks(false, false).join(textSep)}</div>`;
+            let probeBox = probeContainer.querySelector('.message-box');
             doFitStatusBoxToFill(probeBox, 99); // generous placeholder; re-fit properly below regardless
             let realRows = countVisualRows(probeBox);
             let isBusy = realRows > 3;
             mergeHeadSub = isBusy && !!mergeCandidateText;
             mergeGeshemBlessing = isBusy && !!geshemBlessingCandidate;
             visualRowCount = realRows - (mergeHeadSub ? 1 : 0) - (mergeGeshemBlessing ? 1 : 0);
+            document.body.removeChild(probeContainer);
         }
 
         let statusBlocks = buildBlocks(mergeHeadSub, mergeGeshemBlessing);
