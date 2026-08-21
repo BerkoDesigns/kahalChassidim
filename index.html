@@ -1217,6 +1217,20 @@ function updateUI() {
         dIso = (cSec >= rtSecs - 1500) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
     } else if (now.getDay() === 5 || (tomorrowIsYomTovForFlip && !todayIsYomTovForFlip)) {
         dIso = (candleSecsForFlip > 0 && cSec >= candleSecsForFlip) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now);
+    } else if (todayIsYomTovForFlip && !tomorrowIsYomTovForFlip) {
+        // Today is the LAST day of Yom Tov, tomorrow is ordinary/Chol
+        // Hamoed. Deliberately stays on today, never flips forward via RT
+        // here — a real bug: the ordinary-weekday branch below doesn't
+        // know today was Yom Tov, so it flipped dIso forward past RT
+        // regardless, which made `isYomTov` come out false before the
+        // isYomTov branch's OWN internal check (`!nextDayIsYomTov &&
+        // isPastRT`, which decides when to show "מוצאי יום טוב" / "אתה
+        // חוננתנו") ever got a chance to run — so that whole message
+        // silently never appeared on the actual last night of any Yom
+        // Tov (Rosh Hashanah day 2, Sukkot day 2, Shavuot day 2, etc.).
+        // Staying on today lets that existing internal check do its job;
+        // the natural midnight rollover of `now` advances the day after.
+        dIso = getIso(now);
     } else {
         // Ordinary weekday: the Hebrew day itself changes at RT (72 min),
         // not at dawn — flips forward the evening before, same as every
