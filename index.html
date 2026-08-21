@@ -1642,9 +1642,10 @@ function updateUI() {
                 cls = "gold-box";
                 showDefaultBlessingExtra = true;
             } else if (dayW === 5 && !isYomTov && !isEsseraBTevet(dToday.heb) && !isPastRT) {
-                // RULE 13: FRIDAY TACHANUN
+                // RULE 13: FRIDAY TACHANUN — still shows that Tachanun isn't
+                // said, but not the reason ("ערב שבת קודש") — that part is
+                // common knowledge and doesn't need spelling out.
                 head = "אין אומרים תחנון"; 
-                sub = "ערב שבת קודש"; 
                 cls = "teal-box";
                 showDefaultBlessingExtra = true;
             } else {
@@ -1704,19 +1705,14 @@ function updateUI() {
     let demotedDefaultLine = geshemPromoted ? `<span id="status-sub">${head}</span>` : "";
 
     // When both מוריד הגשם/הטל and ותן ברכה/ותן טל ומטר would end up
-    // demoted at the bottom, combine them onto ONE shared line instead of
-    // two separate ones — keeps the box from growing past 4-5 lines when
-    // something specific is also showing up top (holiday text, Tachanun,
-    // KL, season pills, etc.).
+    // demoted at the bottom, they're a CANDIDATE for combining onto one
+    // shared line — but only when the box is actually busy (see the merge
+    // logic below, same >3-visual-rows rule as head+sub). When there's
+    // room, they show as two separate lines instead.
     let defaultBlessingText = isTalUmatar ? "ותן טל ומטר" : "ותן ברכה";
-    let demotedGeshemLine = "", defaultBlessingLine = "";
-    if (!geshemPromoted && geshemTalText && showDefaultBlessingExtra) {
-        demotedGeshemLine = `<span class="geshem-tal-text geshem-tal-demoted">${geshemTalText}<span class="mid-divider">│</span>${defaultBlessingText}</span>`;
-    } else if (!geshemPromoted && geshemTalText) {
-        demotedGeshemLine = `<span class="geshem-tal-text geshem-tal-demoted">${geshemTalText}</span>`;
-    } else if (showDefaultBlessingExtra) {
-        defaultBlessingLine = `<span class="default-blessing-demoted">${defaultBlessingText}</span>`;
-    }
+    let geshemBlessingCandidate = !geshemPromoted && geshemTalText && showDefaultBlessingExtra;
+    let geshemAloneLine = (!geshemPromoted && geshemTalText) ? `<span class="geshem-tal-text geshem-tal-demoted">${geshemTalText}</span>` : "";
+    let blessingAloneLine = showDefaultBlessingExtra ? `<span class="default-blessing-demoted">${defaultBlessingText}</span>` : "";
 
     // Tzidkatcha — Shabbat Mincha only, from Mincha Gedolah onward; turns
     // off automatically at Motzei Shabbos since isShab itself goes false
@@ -1750,23 +1746,28 @@ function updateUI() {
         displayHeadColored = `<span class="force-black">${displayHeadColored}</span>`;
     }
 
-    // Once the box has more than 3 VISUAL rows, merge head with the
-    // geshem/tal second line ONLY (e.g. "מוריד הטל" / "ותן ברכה", via
-    // demotedDefaultLine) — this is the ONLY pairing meant to ever merge.
-    // A plain `sub` never merges regardless of row count.
+    // Two pairs are candidates for merging onto one line, but ONLY once the
+    // box has more than 3 VISUAL rows — otherwise both stay as separate
+    // lines. Mutually exclusive in practice (geshemPromoted vs not), but
+    // decided together from the same real measurement either way:
+    //   1. head + geshem/tal second line (e.g. "מוריד הטל" / "ותן ברכה",
+    //      via demotedDefaultLine) — the ONLY head pairing that ever merges.
+    //      A plain `sub` never merges regardless of row count.
+    //   2. geshem/tal demoted line + the default blessing line, when both
+    //      would otherwise show separately at the bottom.
     //
     // "Visual rows" can't be known in advance: a pills row may wrap to 2+
     // lines depending on the eventual fitted font size, which itself
     // depends on the merge decision — genuinely circular. So this builds
-    // the box once WITHOUT merging, actually fits it, measures the real
-    // rendered row count (grouping elements by rounded vertical position —
-    // wrapped pills land on a different row than the first line), and
-    // only THEN decides whether to merge and re-render if so.
+    // the box once WITHOUT any merging, actually fits it, measures the
+    // real rendered row count (grouping elements by rounded vertical
+    // position — wrapped pills land on a different row than the first
+    // line), and only THEN decides whether to merge and re-render if so.
     let mergeCandidateText = demotedDefaultLine ? head : "";
 
-    function buildBlocks(doMerge) {
+    function buildBlocks(doMergeHS, doMergeGB) {
         let blocks = [];
-        if (doMerge) {
+        if (doMergeHS) {
             let secondLineColored = `<span class="force-black">${mergeCandidateText}</span>`;
             blocks.push(`<span class="head-sub-merged">${displayHeadColored}<span class="mid-divider">│</span>${secondLineColored}</span>`);
         } else {
@@ -1777,8 +1778,12 @@ function updateUI() {
         if (rochDaysLine) blocks.push(`<span id="status-sub">${rochDaysLine}</span>`);
         if (klLine) blocks.push(klLine);
         if (seasonLine) blocks.push(seasonLine);
-        if (demotedGeshemLine) blocks.push(demotedGeshemLine);
-        if (defaultBlessingLine) blocks.push(defaultBlessingLine);
+        if (doMergeGB && geshemBlessingCandidate) {
+            blocks.push(`<span class="geshem-tal-text geshem-tal-demoted">${geshemTalText}<span class="mid-divider">│</span>${defaultBlessingText}</span>`);
+        } else {
+            if (geshemAloneLine) blocks.push(geshemAloneLine);
+            if (blessingAloneLine) blocks.push(blessingAloneLine);
+        }
         if (tzidkatchaLine) blocks.push(tzidkatchaLine);
         return blocks;
     }
@@ -1801,21 +1806,25 @@ function updateUI() {
     // using doFitStatusBoxToFill directly (not the async fitStatusBoxToFill)
     // for both passes so nothing here runs out of order.
     document.fonts.ready.then(() => {
-        let mergeHeadSub = false;
+        let mergeHeadSub = false, mergeGeshemBlessing = false;
         let visualRowCount = 1;
+        let needsProbe = !!mergeCandidateText || !!geshemBlessingCandidate;
 
-        if (mergeCandidateText) {
-            // Pass 1 — unmerged, real fit, real measurement of actual wrap.
-            let sH1 = `<div class="message-box ${cls}">${buildBlocks(false).join(textSep)}</div>`;
+        if (needsProbe) {
+            // Pass 1 — nothing merged, real fit, real measurement of the
+            // actual rendered row count (including any pill wrap).
+            let sH1 = `<div class="message-box ${cls}">${buildBlocks(false, false).join(textSep)}</div>`;
             $('LEFT_MSG').innerHTML = sH1;
             let probeBox = $('LEFT_MSG').querySelector('.message-box');
             doFitStatusBoxToFill(probeBox, 99); // generous placeholder; re-fit properly below regardless
-            visualRowCount = countVisualRows(probeBox);
-            mergeHeadSub = visualRowCount > 3;
-            if (mergeHeadSub) visualRowCount = visualRowCount - 1; // merge removes one row
+            let realRows = countVisualRows(probeBox);
+            let isBusy = realRows > 3;
+            mergeHeadSub = isBusy && !!mergeCandidateText;
+            mergeGeshemBlessing = isBusy && !!geshemBlessingCandidate;
+            visualRowCount = realRows - (mergeHeadSub ? 1 : 0) - (mergeGeshemBlessing ? 1 : 0);
         }
 
-        let statusBlocks = buildBlocks(mergeHeadSub);
+        let statusBlocks = buildBlocks(mergeHeadSub, mergeGeshemBlessing);
         // Always centered — doFitStatusBoxToFill handles making everything
         // fill the space, so the container itself just centers as a whole.
         let sH = `<div class="message-box ${cls}">${statusBlocks.join(textSep)}</div>`;
