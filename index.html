@@ -944,14 +944,15 @@ function fitGroupInBox(els, container, vhStart) {
 // Checks every individual block's own bounding box against the container,
 // not just aggregate scrollHeight — catches horizontal overflow (e.g. a
 // wrapped pill bleeding past the edge) that scrollHeight alone would miss.
-function fitStatusBoxToFill(container, visualRowCount) {
+// Synchronous core — does the actual measuring/sizing work. Exposed
+// separately from fitStatusBoxToFill (below) so code that needs to fit,
+// measure, and fit again in one synchronous sequence (the head/sub merge
+// decision, which measures real pill-wrap behavior between two fits) can
+// call this directly instead of going through the async font-ready wrapper
+// twice, which would run out of order (code after fitStatusBoxToFill would
+// execute before its deferred work, since it's wrapped in a promise).
+function doFitStatusBoxToFill(container, visualRowCount) {
     if (!container) return;
-    // Wait for webfonts to actually be ready before measuring — if
-    // 'Suez One'/'Assistant' haven't finished loading yet, measuring
-    // against fallback-font metrics would lock in a size that no longer
-    // matches once the real font swaps in. Resolves immediately once
-    // fonts are already loaded (the normal case on every re-render).
-    document.fonts.ready.then(() => {
     // KL badge is now a single element (matches the pills), so one
     // selector covers both text-sizing and containment checks.
     const SEL = '#status-head, [id="status-sub"], .season-pill, #status-kl, .geshem-tal-demoted, .default-blessing-demoted, .head-sub-merged';
@@ -997,7 +998,19 @@ function fitStatusBoxToFill(container, visualRowCount) {
         if (fits()) { best = mid; lo = mid; } else { hi = mid; }
     }
     applySize(best);
-    });
+}
+
+// Public entry point — everything except the merge-decision code should
+// keep calling this one. Defers to doFitStatusBoxToFill once webfonts are
+// confirmed ready (see doFitStatusBoxToFill's own comment for why this
+// matters). The merge-decision code calls doFitStatusBoxToFill directly
+// instead, inside its own single document.fonts.ready callback, so its
+// two fit-then-measure-then-fit passes stay in the correct synchronous
+// order — going through this async wrapper twice would let code after
+// each call run before that call's actual work happened.
+function fitStatusBoxToFill(container, visualRowCount) {
+    if (!container) return;
+    document.fonts.ready.then(() => doFitStatusBoxToFill(container, visualRowCount));
 }
 
 // Expand UP to fill available space (for molad & summer messages)
@@ -1737,50 +1750,82 @@ function updateUI() {
         displayHeadColored = `<span class="force-black">${displayHeadColored}</span>`;
     }
 
-    // Once the box has more than 3 blocks, merge head with whichever
-    // "second line" text is actually present — either `sub`, OR
-    // `demotedDefaultLine`'s plain text (the geshem-promoted case, e.g.
-    // "מוריד הטל" / "ותן ברכה" — these two are mutually exclusive, never
-    // both set at once). Missing the demotedDefaultLine case here was a
-    // real bug: it's the MORE common of the two on ordinary days, and
-    // exactly the pairing the original request was based on.
-    let secondLineText = sub || (demotedDefaultLine ? head : "");
-    let wouldBeCount = 1; // head
-    if (secondLineText) wouldBeCount++;
-    if (rochDaysLine) wouldBeCount++;
-    if (klLine) wouldBeCount++;
-    if (seasonLine) wouldBeCount++;
-    if (demotedGeshemLine) wouldBeCount++;
-    if (defaultBlessingLine) wouldBeCount++;
-    if (tzidkatchaLine) wouldBeCount++;
-    let mergeHeadSub = wouldBeCount > 3 && !!secondLineText;
+    // Once the box has more than 3 VISUAL rows, merge head with the
+    // geshem/tal second line ONLY (e.g. "מוריד הטל" / "ותן ברכה", via
+    // demotedDefaultLine) — this is the ONLY pairing meant to ever merge.
+    // A plain `sub` never merges regardless of row count.
+    //
+    // "Visual rows" can't be known in advance: a pills row may wrap to 2+
+    // lines depending on the eventual fitted font size, which itself
+    // depends on the merge decision — genuinely circular. So this builds
+    // the box once WITHOUT merging, actually fits it, measures the real
+    // rendered row count (grouping elements by rounded vertical position —
+    // wrapped pills land on a different row than the first line), and
+    // only THEN decides whether to merge and re-render if so.
+    let mergeCandidateText = demotedDefaultLine ? head : "";
 
-    let statusBlocks = [];
-    if (mergeHeadSub) {
-        let secondLineColored = geshemPromoted ? `<span class="force-black">${secondLineText}</span>` : secondLineText;
-        statusBlocks.push(`<span class="head-sub-merged">${displayHeadColored}<span class="mid-divider">│</span>${secondLineColored}</span>`);
-    } else {
-        statusBlocks.push(`<span id="status-head">${displayHeadColored}</span>`);
-        if (demotedDefaultLine) statusBlocks.push(demotedDefaultLine);
-        if (sub) statusBlocks.push(`<span id="status-sub">${sub}</span>`);
+    function buildBlocks(doMerge) {
+        let blocks = [];
+        if (doMerge) {
+            let secondLineColored = `<span class="force-black">${mergeCandidateText}</span>`;
+            blocks.push(`<span class="head-sub-merged">${displayHeadColored}<span class="mid-divider">│</span>${secondLineColored}</span>`);
+        } else {
+            blocks.push(`<span id="status-head">${displayHeadColored}</span>`);
+            if (demotedDefaultLine) blocks.push(demotedDefaultLine);
+            if (sub) blocks.push(`<span id="status-sub">${sub}</span>`);
+        }
+        if (rochDaysLine) blocks.push(`<span id="status-sub">${rochDaysLine}</span>`);
+        if (klLine) blocks.push(klLine);
+        if (seasonLine) blocks.push(seasonLine);
+        if (demotedGeshemLine) blocks.push(demotedGeshemLine);
+        if (defaultBlessingLine) blocks.push(defaultBlessingLine);
+        if (tzidkatchaLine) blocks.push(tzidkatchaLine);
+        return blocks;
     }
-    if (rochDaysLine) statusBlocks.push(`<span id="status-sub">${rochDaysLine}</span>`);
-    if (klLine) statusBlocks.push(klLine);
-    if (seasonLine) statusBlocks.push(seasonLine);
-    if (demotedGeshemLine) statusBlocks.push(demotedGeshemLine);
-    if (defaultBlessingLine) statusBlocks.push(defaultBlessingLine);
-    if (tzidkatchaLine) statusBlocks.push(tzidkatchaLine);
+
+    function countVisualRows(box) {
+        const SEL2 = '#status-head, [id="status-sub"], .season-pill, #status-kl, .geshem-tal-demoted, .default-blessing-demoted, .head-sub-merged';
+        let tops = Array.from(box.querySelectorAll(SEL2))
+            .map(el => el.getBoundingClientRect().top).sort((a, b) => a - b);
+        let rows = 0, lastTop = null;
+        for (const t of tops) {
+            if (lastTop === null || t - lastTop > 5) { rows++; lastTop = t; }
+        }
+        return rows;
+    }
+
     let textSep = '<div class="text-sep"></div>';
-    // Always centered — fitStatusBoxToFill handles making everything fill
-    // the space, so the container itself just centers the block as a whole.
-    let sH = `<div class="message-box ${cls}">${statusBlocks.join(textSep)}</div>`;
-    if (sH !== currentStatusHTML) {
-        $('LEFT_MSG').innerHTML = sH; 
-        currentStatusHTML = sH;
-        let msgBoxEl = $('LEFT_MSG').querySelector('.message-box');
-        let visualRowCount = mergeHeadSub ? wouldBeCount - 1 : wouldBeCount;
-        if (msgBoxEl) fitStatusBoxToFill(msgBoxEl, visualRowCount);
-    }
+
+    // The whole two-pass sequence (build, fit, measure, maybe rebuild, fit
+    // again) has to run in one synchronous block once fonts are ready —
+    // using doFitStatusBoxToFill directly (not the async fitStatusBoxToFill)
+    // for both passes so nothing here runs out of order.
+    document.fonts.ready.then(() => {
+        let mergeHeadSub = false;
+        let visualRowCount = 1;
+
+        if (mergeCandidateText) {
+            // Pass 1 — unmerged, real fit, real measurement of actual wrap.
+            let sH1 = `<div class="message-box ${cls}">${buildBlocks(false).join(textSep)}</div>`;
+            $('LEFT_MSG').innerHTML = sH1;
+            let probeBox = $('LEFT_MSG').querySelector('.message-box');
+            doFitStatusBoxToFill(probeBox, 99); // generous placeholder; re-fit properly below regardless
+            visualRowCount = countVisualRows(probeBox);
+            mergeHeadSub = visualRowCount > 3;
+            if (mergeHeadSub) visualRowCount = visualRowCount - 1; // merge removes one row
+        }
+
+        let statusBlocks = buildBlocks(mergeHeadSub);
+        // Always centered — doFitStatusBoxToFill handles making everything
+        // fill the space, so the container itself just centers as a whole.
+        let sH = `<div class="message-box ${cls}">${statusBlocks.join(textSep)}</div>`;
+        if (sH !== currentStatusHTML) {
+            $('LEFT_MSG').innerHTML = sH;
+            currentStatusHTML = sH;
+            let msgBoxEl = $('LEFT_MSG').querySelector('.message-box');
+            if (msgBoxEl) doFitStatusBoxToFill(msgBoxEl, visualRowCount);
+        }
+    });
 
     // RULE 12: Image freeze
     updateP1Image(isKodesh);
