@@ -1281,15 +1281,30 @@ function updateUI() {
         $('DAY_LABEL').innerText   = DAY_MAP[dDate.day] || dDate.day;
         $('DATE_LABEL').innerText  = dDate.heb;
         $('PARSHA_LABEL').innerText = dDate.parsha ? "פרשת " + dDate.parsha : "";
+        // The displayed RT time's +2-minute buffer follows the same rule
+        // as the logic-level rtSecs above (RULE 2 & 3): only Shabbat, Yom
+        // Tov, or a fast day get it. This is a SEPARATE piece of code
+        // from rtSecs — it controls the TEXT shown in the zmanim table,
+        // not any date-flip/Motzei-Shabbat decision — and was still
+        // unconditionally adding +2 here even after rtSecs itself was
+        // fixed, which is why the board kept showing the old +2 minutes
+        // on ordinary weekdays. Based on dDate (whichever day is actually
+        // being displayed here, which may already be flipped ahead of
+        // today's real civil date) rather than dToday, since this is
+        // about the day whose RT is actually on screen.
+        let dDateIsShabbat = dDate.day === "Sha" || dDate.day === "Sat";
+        let dDateIsYomTov  = dDate.yomtov === "Y";
+        let dDateIsFastDay = isFastDayToday(dDate.holidayText || "");
+        let rtDisplayShiftMin = (dDateIsShabbat || dDateIsYomTov || dDateIsFastDay) ? 2 : 0;
         for (let i = 1; i <= 11; i++) {
             let bt = dDate.z[i-1];
-            $('z'+i).innerHTML = fmtZman((i === 11) ? shiftTime(bt, 2) : bt);
+            $('z'+i).innerHTML = fmtZman((i === 11) ? shiftTime(bt, rtDisplayShiftMin) : bt);
         }
         // צאת הכוכבים (60) — Bayswater only. Always exactly 12 minutes
-        // before the DISPLAYED RT time (which itself already has a +2 min
-        // buffer baked in via shiftTime(bt, 2) above) — net -10 min off
-        // the raw z[10] value.
-        $('z-tzeit60').innerHTML = fmtZman(shiftTime(dDate.z[10], -10));
+        // before the DISPLAYED RT time above — net shift off the raw
+        // z[10] value is (rtDisplayShiftMin - 12), generalizing what used
+        // to be a hardcoded -10 that assumed the +2 buffer always applied.
+        $('z-tzeit60').innerHTML = fmtZman(shiftTime(dDate.z[10], rtDisplayShiftMin - 12));
     }
 
     // RULE 11: Candle lighting
