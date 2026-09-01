@@ -1052,6 +1052,25 @@ function isEsseraBTevet(hebDate) {
     return hebDate.includes("י'") && hebDate.includes("טבת");
 }
 
+// The 5 public fast days (Yom Kippur excluded — it's Yom Tov, already
+// covered separately by the isYomTov check). Detected via the sheet's
+// own holiday-text column (Column D), confirmed to reliably list these
+// on whichever day the fast actually falls — including pushed years
+// (Tzom Gedaliah/Tisha B'Av move to Sunday, Ta'anis Esther moves earlier
+// to Thursday, when the default date would fall on Shabbat) — so no
+// separate push-calculation is needed here, same as RC/Purim/Chanukah
+// detection elsewhere in this file. A couple of spelling variants are
+// checked per fast since the exact sheet convention wasn't verified in
+// code beforehand.
+function isFastDayToday(holidayText) {
+    if (!holidayText) return false;
+    return holidayText.includes("צום גדליה") ||
+           holidayText.includes("עשרה בטבת") ||
+           holidayText.includes("תענית אסתר") ||
+           holidayText.includes("שבעה עשר בתמוז") || holidayText.includes("יז בתמוז") ||
+           holidayText.includes("תשעה באב");
+}
+
 // RULE 10: KIDDUSH LEVANA
 function getKiddushLevana(now, hebDate, isShab, holidayText, dayOfWeek, cSec, alosSec, rtSec) {
     if (isShab) return false;
@@ -1197,7 +1216,16 @@ function updateUI() {
     }
 
     // RULE 2 & 3: Flip logic
-    let rtSecs = getSec(dToday.z[10], true) + 120;
+    // The 2-minute buffer is a deliberate stringency so the board never
+    // treats Shabbat/Yom Tov/a fast day as over even a moment early —
+    // it does NOT apply on an ordinary weekday, where there's no such
+    // concern (matches how Chesed V'Emes has always worked, with no
+    // buffer at all). Confirmed explicitly with the Rav.
+    let isTodayShabbatForRT = now.getDay() === 6;
+    let isTodayYomTovForRT  = dToday.yomtov === "Y";
+    let isTodayFastDayForRT = isFastDayToday(holidayText);
+    let rtBufferSecs = (isTodayShabbatForRT || isTodayYomTovForRT || isTodayFastDayForRT) ? 120 : 0;
+    let rtSecs = getSec(dToday.z[10], true) + rtBufferSecs;
     let oIso   = (cSec >= rtSecs - 1500) ? getIso(new Date(now.getTime() + 86400000)) : getIso(now); // 25 min before RT
 
     // Hebrew Date Flip for dIso/dDate:
