@@ -103,7 +103,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
   }
   .marquee-clip {
     position: absolute; top: 0; bottom: 0;
-    left: 21vw; right: 6vw;  /* keeps clear of the date+temperature (left) and בס"ד (right) — corrected after the temperature text (not loaded in local testing) was found to push this wider than first measured */
+    left: 21vw; right: 21vw;  /* symmetric — matched to the larger (left) margin so the clip region's own center lines up with the true center of the screen, not skewed toward the shorter side */
     overflow: hidden;
   }
   .branding-shul {
