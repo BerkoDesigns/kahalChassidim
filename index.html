@@ -103,7 +103,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
   }
   .marquee-clip {
     position: absolute; top: 0; bottom: 0;
-    left: 21vw; right: 21vw;  /* symmetric — matched to the larger (left) margin so the clip region's own center lines up with the true center of the screen, not skewed toward the shorter side */
+    left: 19vw; right: 6vw;  /* asymmetric — tightened to the real minimum each side needs (verified safe against worst-case date/temp combos), with true screen-centering handled separately in JS instead of by keeping this symmetric */
     overflow: hidden;
   }
   .branding-shul {
@@ -2112,10 +2112,25 @@ function headerSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function runHeaderMarquee() {
     const el = document.querySelector('.branding-shul');
+    const clipEl = document.querySelector('.marquee-clip');
+
+    // Compensates for marquee-clip's asymmetric left/right margins (kept
+    // asymmetric — tightened to each side's own real minimum — so the
+    // usable scrolling width isn't wasted matching the wider side).
+    // Without this, the "resting" position would center within the clip
+    // region itself, which sits off from the true center of the header
+    // bar since the clip's own margins aren't equal.
+    function getCenterOffsetPx() {
+        const barRect = clipEl.parentElement.getBoundingClientRect();
+        const clipRect = clipEl.getBoundingClientRect();
+        return (barRect.left + barRect.width / 2) - (clipRect.left + clipRect.width / 2);
+    }
+
     while (true) {
+        const offsetPx = getCenterOffsetPx();
         if (headerPause || headerLines.length === 0) {
             el.style.transition = 'none';
-            el.style.transform = 'translate(-50%, -50%)';
+            el.style.transform = `translate(calc(-50% + ${offsetPx}px), -50%)`;
             el.textContent = SHUL_NAME;
             await headerSleep(HEADER_IDLE_RECHECK_MS);
             continue;
@@ -2127,17 +2142,17 @@ async function runHeaderMarquee() {
             el.textContent = seg;
 
             el.style.transition = 'none';
-            el.style.transform = 'translate(calc(-50% + 100%), -50%)';
+            el.style.transform = `translate(calc(-50% + 100% + ${offsetPx}px), -50%)`;
             void el.offsetWidth;
 
             el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-out`;
-            el.style.transform = 'translate(-50%, -50%)';
+            el.style.transform = `translate(calc(-50% + ${offsetPx}px), -50%)`;
             await headerSleep(HEADER_SCROLL_SECS * 1000);
 
             await headerSleep(HEADER_HOLD_SECS * 1000);
 
             el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in`;
-            el.style.transform = 'translate(calc(-50% - 100%), -50%)';
+            el.style.transform = `translate(calc(-50% - 100% + ${offsetPx}px), -50%)`;
             await headerSleep(HEADER_SCROLL_SECS * 1000);
         }
     }
