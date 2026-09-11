@@ -101,7 +101,11 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
     justify-content: center; position: relative;
     border-bottom: 1px solid #d4cec6; overflow: hidden;
   }
-  .branding-shul { font-size: 4.2vh; color: var(--gold-dark); font-weight: bold; }
+  .branding-shul {
+    font-size: 4.2vh; color: var(--gold-dark); font-weight: bold;
+    position: absolute; left: 50%; white-space: nowrap;
+    transform: translateX(-50%);
+  }
   #ENG_SIDE {
     position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
     font-size: 2.5vh; color: var(--gold-dark);
@@ -386,6 +390,8 @@ var p1RotateTimer = null, isShabbosImageActive = false;
 var currentlyHighlightedId = null, currentStatusHTML = "", lastDateIso = "";
 var defaultSummerMsg = "", omerPic = "";
 var nightModeOverride = false;
+var headerLines = [];
+var headerPause = false;
 
 const allZRows = document.querySelectorAll('.z-row');
 const THREE_AM = 10800;
@@ -2020,6 +2026,8 @@ function loadData() {
         defaultSummerMsg = d.defaultMsg || "";
         omerPic = d.omerPic || "";
         nightModeOverride = d.nightModeOverride === true;
+        headerLines = Array.isArray(d.headerLines) ? d.headerLines : [];
+        headerPause = d.headerPause === true;
         p1Images    = d.p1List || [];
         shabbosPic  = d.shabbosPic || "";
         p1Rotation  = d.p1Rotation !== false;
@@ -2081,6 +2089,53 @@ function parseMoladEntry(str) {
 
 // ── INIT ────────────────────────────────────────────────────────────────────────────────
 setInterval(updateClock, 1000); updateClock();
+
+// SCROLLING HEADER LINES — cycles the shul name plus any currently-
+// active scheduled messages through a scroll-in/hold/scroll-out
+// sequence. Self-sustaining loop: re-checks the latest headerLines/
+// headerPause at each segment boundary (and periodically while idle),
+// so a schedule change or the pause toggle takes effect at the next
+// natural break rather than needing a page reload.
+const SHUL_NAME = document.querySelector('.branding-shul').textContent;
+const HEADER_SCROLL_SECS = 1.0;   // slide transition speed
+const HEADER_HOLD_SECS = 4.0;     // freeze time per line, fully visible
+const HEADER_IDLE_RECHECK_MS = 5000;
+
+function headerSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runHeaderMarquee() {
+    const el = document.querySelector('.branding-shul');
+    while (true) {
+        if (headerPause || headerLines.length === 0) {
+            el.style.transition = 'none';
+            el.style.transform = 'translateX(-50%)';
+            el.textContent = SHUL_NAME;
+            await headerSleep(HEADER_IDLE_RECHECK_MS);
+            continue;
+        }
+
+        const segments = [SHUL_NAME, ...headerLines];
+        for (const seg of segments) {
+            if (headerPause || headerLines.length === 0) break;
+            el.textContent = seg;
+
+            el.style.transition = 'none';
+            el.style.transform = 'translateX(calc(-50% + 100%))';
+            void el.offsetWidth;
+
+            el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-out`;
+            el.style.transform = 'translateX(-50%)';
+            await headerSleep(HEADER_SCROLL_SECS * 1000);
+
+            await headerSleep(HEADER_HOLD_SECS * 1000);
+
+            el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in`;
+            el.style.transform = 'translateX(calc(-50% - 100%))';
+            await headerSleep(HEADER_SCROLL_SECS * 1000);
+        }
+    }
+}
+runHeaderMarquee();
 loadWeather(); setInterval(loadWeather, 900000);
 loadData(); setInterval(loadData, 120000);
 setInterval(updateUI, 10000); updateUI();
