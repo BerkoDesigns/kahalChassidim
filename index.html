@@ -101,10 +101,15 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
     justify-content: center; position: relative;
     border-bottom: 1px solid #d4cec6; overflow: hidden;
   }
+  .marquee-clip {
+    position: absolute; top: 0; bottom: 0;
+    left: 15vw; right: 6vw;  /* keeps clear of the date (left) and בס"ד (right) — measured from their real widths, with buffer for longer dates */
+    overflow: hidden;
+  }
   .branding-shul {
     font-size: 4.2vh; color: var(--gold-dark); font-weight: bold;
-    position: absolute; left: 50%; white-space: nowrap;
-    transform: translateX(-50%);
+    position: absolute; left: 50%; top: 50%; white-space: nowrap;
+    transform: translate(-50%, -50%);
   }
   #ENG_SIDE {
     position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
@@ -301,7 +306,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
 <div class="master-frame">
   <div class="branding-bar">
     <div id="ENG_SIDE"><span id="ENG_DATE"></span><span id="WEATHER"></span></div>
-    <div class="branding-shul">קהל חסידים ד'בעיסוואטער</div>
+    <div class="marquee-clip"><div class="branding-shul">קהל חסידים ד'בעיסוואטער</div></div>
     <div id="BSD">בס"ד</div>
   </div>
 
@@ -2028,6 +2033,8 @@ function loadData() {
         nightModeOverride = d.nightModeOverride === true;
         headerLines = Array.isArray(d.headerLines) ? d.headerLines : [];
         headerPause = d.headerPause === true;
+        if (typeof d.headerScrollSecs === 'number' && !isNaN(d.headerScrollSecs)) HEADER_SCROLL_SECS = d.headerScrollSecs;
+        if (typeof d.headerHoldSecs === 'number' && !isNaN(d.headerHoldSecs)) HEADER_HOLD_SECS = d.headerHoldSecs;
         p1Images    = d.p1List || [];
         shabbosPic  = d.shabbosPic || "";
         p1Rotation  = d.p1Rotation !== false;
@@ -2097,8 +2104,8 @@ setInterval(updateClock, 1000); updateClock();
 // so a schedule change or the pause toggle takes effect at the next
 // natural break rather than needing a page reload.
 const SHUL_NAME = document.querySelector('.branding-shul').textContent;
-const HEADER_SCROLL_SECS = 1.0;   // slide transition speed
-const HEADER_HOLD_SECS = 4.0;     // freeze time per line, fully visible
+let HEADER_SCROLL_SECS = 1.0;   // slide transition speed (default; overridden by manager-app setting once data loads)
+let HEADER_HOLD_SECS = 4.0;     // freeze time per line, fully visible (default; overridden likewise)
 const HEADER_IDLE_RECHECK_MS = 5000;
 
 function headerSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -2108,7 +2115,7 @@ async function runHeaderMarquee() {
     while (true) {
         if (headerPause || headerLines.length === 0) {
             el.style.transition = 'none';
-            el.style.transform = 'translateX(-50%)';
+            el.style.transform = 'translate(-50%, -50%)';
             el.textContent = SHUL_NAME;
             await headerSleep(HEADER_IDLE_RECHECK_MS);
             continue;
@@ -2120,17 +2127,17 @@ async function runHeaderMarquee() {
             el.textContent = seg;
 
             el.style.transition = 'none';
-            el.style.transform = 'translateX(calc(-50% + 100%))';
+            el.style.transform = 'translate(calc(-50% + 100%), -50%)';
             void el.offsetWidth;
 
             el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-out`;
-            el.style.transform = 'translateX(-50%)';
+            el.style.transform = 'translate(-50%, -50%)';
             await headerSleep(HEADER_SCROLL_SECS * 1000);
 
             await headerSleep(HEADER_HOLD_SECS * 1000);
 
             el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in`;
-            el.style.transform = 'translateX(calc(-50% - 100%))';
+            el.style.transform = 'translate(calc(-50% - 100%), -50%)';
             await headerSleep(HEADER_SCROLL_SECS * 1000);
         }
     }
