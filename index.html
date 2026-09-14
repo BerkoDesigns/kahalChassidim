@@ -2087,6 +2087,29 @@ function loadData() {
                 let d = JSON.parse(cached);
                 schedule = d.schedule || {};
                 computeSeasonDates();
+                // REAL BUG FIXED: this fallback used to only restore
+                // `schedule`, which is why the zmanim table and status
+                // box (both built from `schedule` in updateUI, which
+                // runs independently every 10s) looked fine even during
+                // a genuine fetch failure — but TEF/ANN (and every other
+                // field below) were never restored from this same cached
+                // object, so they stayed stuck on their initial "טוען
+                // מידע..." placeholder indefinitely whenever the live
+                // fetch kept failing. Now mirrors the success path,
+                // just sourced from cache instead of a fresh response.
+                defaultSummerMsg = d.defaultMsg || "";
+                omerPic = d.omerPic || "";
+                nightModeOverride = d.nightModeOverride === true;
+                headerLines = Array.isArray(d.headerLines) ? d.headerLines : [];
+                headerPause = d.headerPause === true;
+                if (typeof d.headerScrollSecs === 'number' && !isNaN(d.headerScrollSecs)) HEADER_SCROLL_SECS = d.headerScrollSecs;
+                if (typeof d.headerHoldSecs === 'number' && !isNaN(d.headerHoldSecs)) HEADER_HOLD_SECS = d.headerHoldSecs;
+                p1Images    = d.p1List || [];
+                shabbosPic  = d.shabbosPic || "";
+                p1Rotation  = d.p1Rotation !== false;
+                activeImageId = d.activeImageId || "";
+                setDataBox('ANN', d.announcements || "", d.annHeader !== false);
+                setDataBox('TEF', d.tefila || "", d.tefHeader !== false);
             }
         } catch(e) {}
     });
