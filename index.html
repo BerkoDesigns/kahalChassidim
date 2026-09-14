@@ -381,6 +381,7 @@ const $ = id => document.getElementById(id);
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjNSAvH290v-6SFkXHJfFHAr8Kh4UlmZxAIQf7-PFFFHWTNOkYDGTggyPz130gG6_Low/exec";
 
 var schedule = {}, moladList = [], p1Images = [], p1Index = 0, shabbosPic = "", p1Rotation = true, activeImageId = "";
+var lastP4Id = "", lastP5Id = "";
 // Elul season (לדוד ה' אורי / שופר / סליחות) — reference dates computed once
 // per data load by computeSeasonDates(), not recalculated every second.
 var elulTriggerDayIso = null;   // 1 Elul (day 2 of the 2-day Rosh Chodesh)
@@ -2068,8 +2069,16 @@ function loadData() {
         }
         setDataBox('ANN', d.announcements || "", d.annHeader !== false);
         setDataBox('TEF', d.tefila || "", d.tefHeader !== false);
-        if (d.p4) $('p4').src = "https://lh3.googleusercontent.com/d/" + d.p4 + "=w1200";
-        if (d.p5) $('p5').src = "https://lh3.googleusercontent.com/d/" + d.p5 + "=w1200";
+        // REAL BUG FIXED: this used to unconditionally reassign .src on
+        // every loadData() call (every 2 minutes), even when the image
+        // hadn't actually changed — reassigning an <img> src can trigger
+        // a full re-fetch in the browser, so these two images were
+        // effectively being re-downloaded every 2 minutes indefinitely,
+        // which is exactly what would look like "always slow to load"
+        // rather than a one-time delay. Now only reassigns when the
+        // underlying file ID has genuinely changed.
+        if (d.p4 && d.p4 !== lastP4Id) { $('p4').src = "https://lh3.googleusercontent.com/d/" + d.p4 + "=w1200"; lastP4Id = d.p4; }
+        if (d.p5 && d.p5 !== lastP5Id) { $('p5').src = "https://lh3.googleusercontent.com/d/" + d.p5 + "=w1200"; lastP5Id = d.p5; }
         moladList = [];
         if (d.moladList && Array.isArray(d.moladList)) {
             for (let entry of d.moladList) { 
@@ -2110,6 +2119,8 @@ function loadData() {
                 activeImageId = d.activeImageId || "";
                 setDataBox('ANN', d.announcements || "", d.annHeader !== false);
                 setDataBox('TEF', d.tefila || "", d.tefHeader !== false);
+                if (d.p4 && d.p4 !== lastP4Id) { $('p4').src = "https://lh3.googleusercontent.com/d/" + d.p4 + "=w1200"; lastP4Id = d.p4; }
+                if (d.p5 && d.p5 !== lastP5Id) { $('p5').src = "https://lh3.googleusercontent.com/d/" + d.p5 + "=w1200"; lastP5Id = d.p5; }
             }
         } catch(e) {}
     });
