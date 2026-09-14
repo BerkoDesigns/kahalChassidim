@@ -1787,7 +1787,19 @@ function updateUI() {
     // Shabbos/Yom Tov; המלך המשפט weekdays only.
     let inAseresYemeiTeshuva = roshHashanahIso && yomKippurIso && dIso >= roshHashanahIso && dIso <= yomKippurIso;
     if (inAseresYemeiTeshuva) seasonPills.push("המלך הקדוש");
-    if (inAseresYemeiTeshuva && !isShab && !isYomTov) seasonPills.push("המלך המשפט");
+    // REAL BUG FIXED: on the LAST night of Yom Tov (e.g. Motzei 2nd day
+    // Rosh Hashanah), dIso deliberately stays on today all night (see the
+    // flip logic above) so the Motzei-Yom-Tov message can correctly
+    // detect "past RT" itself — but that same stuck dIso/dDate.yomtov
+    // also kept isYomTov reading true here long after RT had actually
+    // passed, suppressing this pill for hours it should have shown.
+    // Scoped narrowly to just that one case (today IS Yom Tov, tomorrow
+    // is NOT, and RT has passed) so genuine Yom-Tov-to-Yom-Tov nights
+    // (e.g. RH day 1 into day 2, where day 2 is still legitimately Yom
+    // Tov) are completely unaffected.
+    let yomTovEffectivelyOver = todayIsYomTovForFlip && !tomorrowIsYomTovForFlip && cSec >= rtSecs;
+    let effectiveIsYomTovForMishpat = isYomTov && !yomTovEffectivelyOver;
+    if (inAseresYemeiTeshuva && !isShab && !effectiveIsYomTovForMishpat) seasonPills.push("המלך המשפט");
     let seasonLine = seasonPills.length
         ? `<div class="season-line">${seasonPills.map(p => `<span class="season-pill">${p}</span>`).join('')}</div>`
         : "";
