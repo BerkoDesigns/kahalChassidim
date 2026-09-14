@@ -1964,29 +1964,36 @@ if (tefTitle) {
     else                    tefTitle.textContent = 'זמני התפילות לשבת ויום טוב';
 }
     // Active zman highlight
-    let zT = []; 
-    for (let i=1; i<=11; i++) zT.push({id:'r'+i, sec: getSec(dDate.z[i-1], i>=7)});
+    // REAL BUG FIXED: this used to build zT from dDate (the display day,
+    // which flips at candle-lighting on Friday) and jump to "flipped ->
+    // show tomorrow's first zman" the moment dIso had flipped ahead of
+    // today's real civil date. On Friday, that flip happens at candle-
+    // lighting — well before Shkiah, 60-שקיעה, and Rabbeinu Tam have
+    // actually happened that same night — so the highlight jumped
+    // straight to Saturday's Alos right after candle-lighting and never
+    // touched Friday night's own remaining 3 zmanim at all. Fixed by
+    // always building zT from dToday (the real, unflipped civil day)
+    // and only moving to the next day's first zman once ALL of today's
+    // own zmanim (through RT) have genuinely passed — matching the
+    // original fix's intent (highlight something after RT every night)
+    // without the Friday-specific premature jump.
+    let zT = [];
+    for (let i=1; i<=11; i++) zT.push({id:'r'+i, sec: getSec(dToday.z[i-1], i>=7)});
     // צאת הכוכבים (60) inserted between r10 (Shkiah) and r11 (RT) — always
     // chronologically there since it's a fixed 12 min before RT.
-    zT.splice(10, 0, {id: 'r-tzeit60', sec: getSec(dDate.z[10], true) - 600});
-    // REAL BUG, found while auditing every dDate-vs-cSec comparison after
-    // the Kiddush Levana fix: whenever dIso has already flipped ahead of
-    // today's real civil date (past RT — which happens literally every
-    // single night, not just holiday transitions), `dDate` holds
-    // TOMORROW's zmanim while `cSec` is still tonight's real clock. Every
-    // one of tomorrow's zmanim (all early-AM values) reads as "already
-    // passed" against tonight's late clock reading, so nothing ever got
-    // highlighted — this was happening every night after RT, board-wide,
-    // not a rare edge case. Once flipped, tonight's real clock is
-    // conceptually "before dawn" of the new Hebrew day, so its first
-    // zman (Alos) is correctly the "next/active" one regardless of the
-    // literal clock reading.
+    zT.splice(10, 0, {id: 'r-tzeit60', sec: getSec(dToday.z[10], true) - 600});
+
     let tgtId;
-    if (dIso !== getIso(now)) {
-        tgtId = zT.length ? zT[0].id : null;
+    let nIdx = zT.findIndex(z => z.sec > cSec);
+    if (nIdx !== -1) {
+        tgtId = zT[nIdx].id;
     } else {
-        let nIdx = zT.findIndex(z => z.sec > cSec);
-        tgtId = nIdx !== -1 ? zT[nIdx].id : null;
+        // All of today's own zmanim (through RT) have passed — show the
+        // first zman of the new day, same as before.
+        let dNext = schedule[getIso(new Date(now.getTime() + 86400000))] || dToday;
+        let zNext = [];
+        for (let i=1; i<=11; i++) zNext.push({id:'r'+i, sec: getSec(dNext.z[i-1], i>=7)});
+        tgtId = zNext.length ? zNext[0].id : null;
     }
     if (tgtId !== currentlyHighlightedId) {
         allZRows.forEach(r => r.classList.remove('active-zman'));
