@@ -2200,18 +2200,29 @@ async function runHeaderMarquee() {
             if (headerPause || headerLines.length === 0) break;
             el.textContent = seg;
 
+            // Off-screen distance must clear the clip region's own width,
+            // not just the text's own width — short text was barely
+            // moving at all before, so most of it was already visible
+            // right at the start instead of gradually revealing.
+            const clipWidthPx = clipEl.clientWidth;
+            const textWidthPx = el.offsetWidth;
+            const offScreenPx = clipWidthPx / 2 + textWidthPx / 2 + 20;
+
             el.style.transition = 'none';
-            el.style.transform = `translate(calc(-50% + 100% + ${offsetPx}px), -50%)`;
+            el.style.transform = `translate(calc(-50% + ${offScreenPx}px + ${offsetPx}px), -50%)`;
             void el.offsetWidth;
 
-            el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-out`;
+            // One continuous, constant-feel motion the whole way in —
+            // same easing as the exit, so entry and exit feel symmetric
+            // rather than a slow reveal followed by a sudden speed-up.
+            el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
             el.style.transform = `translate(calc(-50% + ${offsetPx}px), -50%)`;
             await headerSleep(HEADER_SCROLL_SECS * 1000);
 
             await headerSleep(HEADER_HOLD_SECS * 1000);
 
-            el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in`;
-            el.style.transform = `translate(calc(-50% - 100% + ${offsetPx}px), -50%)`;
+            el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
+            el.style.transform = `translate(calc(-50% - ${offScreenPx}px + ${offsetPx}px), -50%)`;
             await headerSleep(HEADER_SCROLL_SECS * 1000);
         }
     }
