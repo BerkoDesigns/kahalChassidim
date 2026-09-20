@@ -499,6 +499,78 @@ function getHebMonthOnly(hebStr) {
     return parts.length >= 2 ? parts[1] : "";
 }
 
+// ── HEBREW CALENDAR MATH (Sept 2026, corrected same day) ─────────────
+// Replaces the season-anchor row lookups below with direct computation, so
+// deleting old Zmanim-tab rows can never again take out Selichos / Ladovid
+// Oiri / Hamelech Hamishpat / Chanukah.
+//
+// IMPORTANT HISTORY: the first version of this fix used a from-scratch
+// Dershowitz & Reingold-style molad/leap-year implementation. That
+// implementation had a real bug — confirmed live on Sept 20, 2026, hours
+// before Yom Kippur, when it turned out to place Rosh Hashanah and Yom
+// Kippur one day LATER than they actually fall (it thought Yom Kippur was
+// Sept 22, when it's actually Sept 21). The extensive same-day regression
+// testing done at the time didn't catch this because the synthetic test
+// sheet used to validate it was ALSO generated from that same buggy
+// implementation — the test was internally consistent but never checked
+// against a genuinely independent, real-world source until it was checked
+// against the live board.
+//
+// This version instead delegates entirely to the browser's own built-in
+// Hebrew calendar (Intl.DateTimeFormat with the Hebrew calendar), which is
+// the same calendar engine every modern browser ships and maintains — not
+// custom arithmetic of ours to get subtly wrong. Confirmed directly against
+// hebcal.com: Rosh Hashanah 5787 = 1 Tishrei = Sat, Sept 12 2026; Yom
+// Kippur 5787 = 10 Tishrei = Mon, Sept 21 2026 — and cross-checked against
+// several other independently-known years (5784-5786) for extra confidence.
+// NOTE: deliberately local-time (not UTC) construction below, matching how
+// every other date computation in this file already works (getIso, all the
+// zman/RT comparisons, etc. are all local-time). An earlier version of this
+// used Date.UTC()/getUTCFullYear() — that broke under the F12 date-testing
+// tools (mobile_date_tester.js and the console snippet), which replace
+// window.Date with a plain function that doesn't carry over the static
+// Date.UTC method, throwing "Date.UTC is not a function" the moment this
+// ran. Local-time noon avoids that dependency entirely and is exactly as
+// safe against DST edge cases (noon is nowhere near a DST transition).
+const HEB_FMT = new Intl.DateTimeFormat('en-US-u-ca-hebrew', { year: 'numeric', month: 'long', day: 'numeric' });
+const HEB_MONTH_NUM_TO_NAME = { 1:'Nisan', 2:'Iyar', 3:'Sivan', 4:'Tamuz', 5:'Av', 6:'Elul', 7:'Tishri', 8:'Heshvan', 9:'Kislev', 10:'Tevet', 11:'Shevat' };
+// Adar (12) / Adar I (12) / Adar II (13) deliberately not included — the
+// season-anchor dates computed below (Elul 1, Tishrei 1/10/22/23, Nisan 15,
+// Kislev 25) never fall in Adar, so the leap-year Adar-I/Adar-II naming
+// question never needs to be resolved here. Everywhere else in this file
+// that DOES care about Adar (the no-Tachanun/Purim logic) already reads the
+// month name straight off the sheet's own Column B text, untouched by this.
+function isoToNoonUTC(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d, 12, 0, 0);
+}
+function noonUTCToIso(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function hebrewYMD(noonUtcDate) {
+    const parts = HEB_FMT.formatToParts(noonUtcDate);
+    return {
+        year: parseInt(parts.find(p => p.type === 'year').value, 10),
+        month: parts.find(p => p.type === 'month').value,
+        day: parseInt(parts.find(p => p.type === 'day').value, 10),
+    };
+}
+// Finds the ISO date of the first day matching Hebrew (month, day) on or
+// after floorIso — same "first match from the floor forward" semantics the
+// old sheet-scanning code used. Scans forward day by day (a given Hebrew
+// month/day always recurs well within 400 days) instead of doing any of
+// our own year arithmetic.
+function firstHebDateOnOrAfter(floorIso, month, day) {
+    const monthName = HEB_MONTH_NUM_TO_NAME[month];
+    let d = isoToNoonUTC(floorIso);
+    for (let i = 0; i < 400; i++) {
+        const heb = hebrewYMD(d);
+        if (heb.month === monthName && heb.day === day) return noonUTCToIso(d);
+        d = new Date(d.getTime() + 86400000);
+    }
+    return null;
+}
+
 // ── HARDCODED NO-TACHANUN DAYS (item 5) ─────────────────────────────
 // Independent of the sheet's Reason tab — computed purely from the Hebrew
 // date. Bayswater-specific list — differs from Chesed V'Emes in the
@@ -509,15 +581,16 @@ function getHebMonthOnly(hebStr) {
 // real sheet: Adar spelled plain "אדר" (non-leap year), "אדר-א" (Adar
 // Rishon), "אדר-ב" (Adar Sheni) in a leap year — Purim Katan uses Adar
 // Rishon, real Purim uses Adar Sheni (or plain Adar in a non-leap year).
+//
+// Sept 2026: now computed directly from the Hebrew calendar (month 9 =
+// Kislev) instead of scanning the sheet for a row that says "כסלו 25" — no
+// longer breaks if that row gets deleted. The +/-40-day guard is unchanged.
 function findKislev25Iso(todayIso) {
-    if (!schedule) return null;
-    let isos = Object.keys(schedule).sort();
-    let todayMs = new Date(todayIso).getTime();
-    for (let iso of isos) {
-        let heb = (schedule[iso] || {}).heb || "";
-        if (getHebMonthOnly(heb) === "כסלו" && extractHebDay(heb) === 25) {
-            if (Math.abs(new Date(iso).getTime() - todayMs) < 40 * 86400000) return iso;
-        }
+    const base = isoToNoonUTC(todayIso);
+    for (let offset = -39; offset <= 39; offset++) {
+        const d = new Date(base.getTime() + offset * 86400000);
+        const heb = hebrewYMD(d);
+        if (heb.month === 'Kislev' && heb.day === 25) return noonUTCToIso(d);
     }
     return null;
 }
@@ -650,29 +723,30 @@ function computeSelichotStartIso(rhIso) {
     return start;
 }
 
-// Scans the loaded schedule once (called after schedule loads, not every
-// second) to find this Hebrew-year's key Elul/Tishrei dates. Only considers
-// dates from ~60 days before today onward, so a schedule spanning more than
-// one Hebrew year always resolves to the current/upcoming season.
+// Computes this Hebrew-year's key Elul/Tishrei/Nisan anchor dates directly
+// from the Hebrew calendar (called after schedule loads, not every second).
+//
+// Sept 2026: previously this scanned the loaded sheet for rows whose Column D
+// text matched "Elul 1", "Rosh Hashanah", etc. — which meant deleting old
+// Zmanim-tab rows could delete THIS cycle's anchor rows and silently break
+// Selichos / Ladovid Oiri / Hamelech Hamishpat / Chanukah all at once (the
+// Sept 2026 incident). Now every date below is calculated, not looked up, so
+// it can never again depend on which rows happen to still be in the sheet.
+// All downstream variable names are unchanged — nothing else in the file
+// needs to know this changed. Same "first match from 60 days before today
+// onward" semantics as the old scan, via firstHebDateOnOrAfter() above.
 function computeSeasonDates() {
     elulTriggerDayIso = null; elulEveIso = null;
     roshHashanahIso = null; yomKippurIso = null; simchatTorahIso = null;
     selichotStartIso = null; shminiAtzeretIso = null; pesach1Iso = null;
-    if (!schedule) return;
-    let searchFloor = getIsoMinusDays(getIso(new Date()), 60);
-    let isos = Object.keys(schedule).sort();
-    for (let iso of isos) {
-        if (iso < searchFloor) continue;
-        let heb = (schedule[iso] || {}).heb || "";
-        if (!heb) continue;
-        let day = extractHebDay(heb);
-        if (!elulTriggerDayIso && heb.includes("אלול") && day === 1) elulTriggerDayIso = iso;
-        if (!roshHashanahIso && heb.includes("תשרי") && day === 1) roshHashanahIso = iso;
-        if (!yomKippurIso && heb.includes("תשרי") && day === 10) yomKippurIso = iso;
-        if (!simchatTorahIso && heb.includes("תשרי") && day === 23) simchatTorahIso = iso;
-        if (!shminiAtzeretIso && heb.includes("תשרי") && day === 22) shminiAtzeretIso = iso;
-        if (!pesach1Iso && heb.includes("ניסן") && day === 15) pesach1Iso = iso;
-    }
+    const todayIso = getIso(new Date());
+    const floorIso = getIsoMinusDays(todayIso, 60);
+    elulTriggerDayIso = firstHebDateOnOrAfter(floorIso, 6, 1);   // Elul 1
+    roshHashanahIso = firstHebDateOnOrAfter(floorIso, 7, 1);     // Tishrei 1
+    yomKippurIso = firstHebDateOnOrAfter(floorIso, 7, 10);       // Tishrei 10
+    shminiAtzeretIso = firstHebDateOnOrAfter(floorIso, 7, 22);   // Tishrei 22
+    simchatTorahIso = firstHebDateOnOrAfter(floorIso, 7, 23);    // Tishrei 23
+    pesach1Iso = firstHebDateOnOrAfter(floorIso, 1, 15);         // Nisan 15
     if (elulTriggerDayIso) elulEveIso = getIsoMinusDays(elulTriggerDayIso, 1);
     if (roshHashanahIso) selichotStartIso = computeSelichotStartIso(roshHashanahIso);
 }
@@ -687,19 +761,13 @@ function computeSeasonDates() {
 // stale — recomputed fresh on every call (cheap forward scan) rather than
 // once per data load, so it can never drift out of sync with whatever
 // date is actually being checked.
+// Sept 2026: now computed directly from the Hebrew calendar (Shmini Atzeret
+// = Tishrei 22, Pesach 1 = Nisan 15) instead of scanning the sheet forward
+// for those rows — no longer depends on future rows being pasted in yet, or
+// on the exact holidayText wording ("שמיני עצרת") still being there.
 function getGeshemTalSeason(todayIso) {
-    if (!schedule) return { season: null, boundary: null };
-    let isos = Object.keys(schedule).sort();
-    let nextSA = null, nextPesach1 = null;
-    for (let iso of isos) {
-        if (iso < todayIso) continue;
-        let entry = schedule[iso] || {};
-        let hText = entry.holidayText || "";
-        let heb = entry.heb || "";
-        if (!nextSA && hText.includes("שמיני עצרת")) nextSA = iso;
-        if (!nextPesach1 && heb.includes("ניסן") && extractHebDay(heb) === 15) nextPesach1 = iso;
-        if (nextSA && nextPesach1) break;
-    }
+    const nextSA = firstHebDateOnOrAfter(todayIso, 7, 22);
+    const nextPesach1 = firstHebDateOnOrAfter(todayIso, 1, 15);
     if (nextPesach1 && (!nextSA || nextPesach1 < nextSA)) return { season: 'geshem', boundary: nextPesach1 };
     if (nextSA) return { season: 'tal', boundary: nextSA };
     return { season: null, boundary: null };
@@ -1173,9 +1241,14 @@ function loadWeather() {
 
 function rotateP1() {
     if (p1Images.length === 0 || isShabbosImageActive) return;
-    // If rotation is off, show only the active image
+    // If rotation is off, show only the active image — but first confirm the
+    // stored activeImageId is actually still one of the current images. If it
+    // was deleted (from Drive or via the app), this stops the board from
+    // trying to load a dead file forever and falls back to the first image
+    // that does still exist instead. Matches Chesed V'Emes's own existing
+    // "active.includes(activeImageId) ? activeImageId : active[0]" pattern.
     if (!p1Rotation) {
-        const id = activeImageId || (p1Images.length > 0 ? p1Images[0] : "");
+        const id = (p1Images.includes(activeImageId) ? activeImageId : p1Images[0]) || "";
         if (id) {
             $('p1').style.opacity = 0;
             setTimeout(() => { $('p1').src = "https://lh3.googleusercontent.com/d/" + id + "=w1200"; $('p1').style.opacity = 1; }, 800);
@@ -1801,7 +1874,18 @@ function updateUI() {
     // this range right at YK's own RT — no separate evening-trigger needed
     // for either boundary. המלך הקדוש every day of the period, including
     // Shabbos/Yom Tov; המלך המשפט weekdays only.
-    let inAseresYemeiTeshuva = roshHashanahIso && yomKippurIso && dIso >= roshHashanahIso && dIso <= yomKippurIso;
+    // Sept 2026: on Yom Kippur night itself, dIso deliberately stays pinned
+    // to Yom Kippur's own date until the following civil midnight (see the
+    // "last day of Yom Tov" dIso-flip branch, and yomTovEffectivelyOver
+    // above, which exists for the same reason). Left alone, that pinning
+    // kept המלך הקדוש / המלך המשפט lit for the rest of that night instead of
+    // ending right when Yom Kippur itself actually ends. Reuses the
+    // existing yomTovEffectivelyOver flag, narrowed to Yom Kippur's own
+    // date specifically, so Rosh Hashanah's last night (which also sets
+    // yomTovEffectivelyOver, to reinstate Mishpat mid-window — see
+    // effectiveIsYomTov above) is completely unaffected.
+    let ykNightIsOver = yomTovEffectivelyOver && dIso === yomKippurIso;
+    let inAseresYemeiTeshuva = roshHashanahIso && yomKippurIso && dIso >= roshHashanahIso && dIso <= yomKippurIso && !ykNightIsOver;
     if (inAseresYemeiTeshuva) seasonPills.push("המלך הקדוש");
     // Reuses the shared effectiveIsYomTov computed earlier (alongside
     // isKodesh) — see that comment for the full explanation. Was
