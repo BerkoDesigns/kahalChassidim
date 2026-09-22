@@ -523,15 +523,8 @@ function getHebMonthOnly(hebStr) {
 // hebcal.com: Rosh Hashanah 5787 = 1 Tishrei = Sat, Sept 12 2026; Yom
 // Kippur 5787 = 10 Tishrei = Mon, Sept 21 2026 — and cross-checked against
 // several other independently-known years (5784-5786) for extra confidence.
-// NOTE: deliberately local-time (not UTC) construction below, matching how
-// every other date computation in this file already works (getIso, all the
-// zman/RT comparisons, etc. are all local-time). An earlier version of this
-// used Date.UTC()/getUTCFullYear() — that broke under the F12 date-testing
-// tools (mobile_date_tester.js and the console snippet), which replace
-// window.Date with a plain function that doesn't carry over the static
-// Date.UTC method, throwing "Date.UTC is not a function" the moment this
-// ran. Local-time noon avoids that dependency entirely and is exactly as
-// safe against DST edge cases (noon is nowhere near a DST transition).
+// Local-time (not UTC) below — matches the rest of the file, and avoids
+// Date.UTC, which broke under the F12 date-testing tools.
 const HEB_FMT = new Intl.DateTimeFormat('en-US-u-ca-hebrew', { year: 'numeric', month: 'long', day: 'numeric' });
 const HEB_MONTH_NUM_TO_NAME = { 1:'Nisan', 2:'Iyar', 3:'Sivan', 4:'Tamuz', 5:'Av', 6:'Elul', 7:'Tishri', 8:'Heshvan', 9:'Kislev', 10:'Tevet', 11:'Shevat' };
 // Adar (12) / Adar I (12) / Adar II (13) deliberately not included — the
@@ -1711,7 +1704,11 @@ function updateUI() {
         // Yom Tov (RULE 4)
         let dNextDay = schedule[getIso(new Date(now.getTime() + 86400000))];
         let nextDayIsYomTov = dNextDay && (dNextDay.yomtov === "Y");
-        if (!nextDayIsYomTov && isPastRT) {
+        // Only trust "RT actually passed tonight" here — the old "before
+        // dawn" fallback wrongly fired during Yom Kippur's own early
+        // morning, before its RT had happened (12:26 AM bug).
+        let yomTovBoxPastRT = cSec >= rtSecs;
+        if (!nextDayIsYomTov && yomTovBoxPastRT) {
             head = "מוצאי יום טוב"; 
             sub = "אתה חוננתנו"; 
             cls = "gold-box";
