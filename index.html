@@ -1035,8 +1035,10 @@ function doFitStatusBoxToFill(container, visualRowCount) {
     let textEls = Array.from(container.querySelectorAll(SEL));
     if (!textEls.length) return;
 
+    // Oct 2026: 2-line case — head capped at 6vh, pills 75% of head.
+    let isSparse = (visualRowCount || 0) <= 2;
     function applySize(vh) {
-        textEls.forEach(el => el.style.fontSize = vh + "vh");
+        textEls.forEach(el => el.style.fontSize = (isSparse && el.classList.contains('season-pill') ? vh * 0.75 : vh) + "vh");
     }
 
     // SAFETY is a real pixel buffer (not subpixel rounding tolerance) —
@@ -1058,15 +1060,14 @@ function doFitStatusBoxToFill(container, visualRowCount) {
         return true;
     }
 
-    // 8.0vh ceiling ONLY for the 2-line case (e.g. just head+sub) — that's
+    // 6.0vh ceiling ONLY for the 2-line case (e.g. just head+sub) — that's
     // the one scenario where filling 100% of the box looked disproportion-
     // ately huge. Everything else (3+ visual lines, including the merged
     // head+sub case which is always 3+ underneath) searches freely up to
     // a generous ceiling so it actually fills the available space, rather
     // than being held back by a cap that was only ever meant for the
     // sparsest case.
-    let isSparse = (visualRowCount || 0) <= 2;
-    let lo = 1.0, hi = isSparse ? 8.0 : 14.0, best = lo;
+    let lo = 1.0, hi = isSparse ? 6.0 : 14.0, best = lo;
     for (let i = 0; i < 20; i++) {
         let mid = (lo + hi) / 2;
         applySize(mid);
