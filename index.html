@@ -2165,13 +2165,13 @@ function renderPlaque(p) {
     if (!p) {
         if (plaqueEmpty) h = '<div class="pl" style="font-size:1em">' + esc(plaqueEmpty).replace(/\r?\n/g,'<br>') + '</div>';
     } else {
-        if (p.intro) h += '<div class="pl" style="font-size:.62em">' + esc(p.intro) + '</div>';
-        if (p.name)  h += '<div class="pl" style="font-size:1.25em">' + esc(plWrapName(p.name)) + '</div>';
+        if (p.intro) h += '<div class="pl" style="font-size:.9em">' + esc(p.intro) + '</div>';
+        if (p.name)  h += '<div class="pl" style="font-size:1.7em">' + esc(plWrapName(p.name)) + '</div>';
         if (p.intro || p.name) h += '<div class="gap"></div>';
-        h += '<div class="pl" style="font-size:.62em">' + esc(PL_PRE_LINE) + '</div>';
+        h += '<div class="pl" style="font-size:.9em">' + esc(PL_PRE_LINE) + '</div>';
         h += '<div class="pl nw" style="font-size:1.9em">' + esc(PL_WHAT) + '</div>';
-        if (p.hebMonth) h += '<div class="pl nw" style="font-size:1.05em">- לחודש ' + esc(p.hebMonth) + ' -</div>';
-        if (p.ded)   h += '<div class="gap"></div><div class="pl" style="font-size:.7em">' + esc(p.ded).replace(/\r?\n/g,'<br>') + '</div>';
+        if (p.hebMonth) h += '<div class="pl nw" style="font-size:1.2em">- לחודש ' + esc(p.hebMonth) + ' -</div>';
+        if (p.ded)   h += '<div class="gap"></div><div class="pl" style="font-size:.95em">' + esc(p.ded).replace(/\r?\n/g,'<br>') + '</div>';
     }
     el.innerHTML = h;
     document.fonts.ready.then(() => {
