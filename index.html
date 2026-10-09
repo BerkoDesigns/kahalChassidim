@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.6</title>
+<title>Bayswater Master Board - COMPLETE v3.7</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -383,7 +383,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
 
 <script>
 /**
- * KAHAL CHASIDIM BAYSWATER BOARD v3.6 — COMPLETE (Oct 2026: donor plaque box; six equal-width boxes, Zmanim column 21vw; plaque top-center, P1 gallery bottom-center, Omer bottom-left, P5 image beside Zmanim)
+ * KAHAL CHASIDIM BAYSWATER BOARD v3.7 — COMPLETE (Oct 2026: plaque big text/pre-line fixed, name prefix+blessing built in; donor plaque box; six equal-width boxes, Zmanim column 21vw; plaque top-center, P1 gallery bottom-center, Omer bottom-left, P5 image beside Zmanim)
  * ALL 14 RULES + ROSH CHODESH LOGIC
  * May 2026
  */
@@ -2141,6 +2141,16 @@ function setDataBox(id, text, showHeader) {
 // Hebrew date (same RT-based flip as the rest of the board). No match →
 // the "no donor" text set in the manager app (blank = empty frame). Several plaques for one month rotate.
 let plaques = [], plaqueEmpty = '', plaqueKey = '', plaqueRot = 0, plaqueHeb = '', plaqueCount = 0;
+const PL_WHAT = 'נר למאור וקאווע';          // always the same sponsorship
+const PL_PRE_LINE = 'בעבור שנדב זכות';        // always the same line before it
+const PL_NAME_PREFIX = 'מו"ה', PL_NAME_SUFFIX = 'הי"ו';
+// Adds the built-in prefix + blessing around a donor name; strips them first if typed, so they never double.
+function plWrapName(n) {
+  n = String(n || '').trim(); if (!n) return '';
+  const Q = '["\u05F4\u201D\u201C]';
+  n = n.replace(new RegExp('^מו' + Q + '?ה\\s*'), '').replace(new RegExp('\\s*הי' + Q + '?ו$'), '').trim();
+  return n ? PL_NAME_PREFIX + ' ' + n + ' ' + PL_NAME_SUFFIX : '';
+}
 function plaqueNorm(s) { return String(s||'').replace(/[׳'"״’\u05F3\u05F4\s]/g,'').replace(/^מר/,'').replace(/[וי]/g,''); }
 function plaquesForDate(hebStr) {
     let parts = (hebStr || '').trim().split(/\s+/);
@@ -2156,10 +2166,10 @@ function renderPlaque(p) {
         if (plaqueEmpty) h = '<div class="pl" style="font-size:1em">' + esc(plaqueEmpty).replace(/\r?\n/g,'<br>') + '</div>';
     } else {
         if (p.intro) h += '<div class="pl" style="font-size:.62em">' + esc(p.intro) + '</div>';
-        if (p.name)  h += '<div class="pl" style="font-size:1.25em">' + esc(p.name) + '</div>';
+        if (p.name)  h += '<div class="pl" style="font-size:1.25em">' + esc(plWrapName(p.name)) + '</div>';
         if (p.intro || p.name) h += '<div class="gap"></div>';
-        if (p.pre)   h += '<div class="pl" style="font-size:.62em">' + esc(p.pre) + '</div>';
-        if (p.what)  h += '<div class="pl nw" style="font-size:1.9em">' + esc(p.what) + '</div>';
+        h += '<div class="pl" style="font-size:.62em">' + esc(PL_PRE_LINE) + '</div>';
+        h += '<div class="pl nw" style="font-size:1.9em">' + esc(PL_WHAT) + '</div>';
         if (p.hebMonth) h += '<div class="pl nw" style="font-size:1.05em">- לחודש ' + esc(p.hebMonth) + ' -</div>';
         if (p.ded)   h += '<div class="gap"></div><div class="pl" style="font-size:.7em">' + esc(p.ded).replace(/\r?\n/g,'<br>') + '</div>';
     }
