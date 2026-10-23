@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.7</title>
+<title>Bayswater Master Board - COMPLETE v3.8</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -2346,9 +2346,33 @@ async function runHeaderMarquee() {
         return (barRect.left + barRect.width / 2) - (clipRect.left + clipRect.width / 2);
     }
 
+    // FIT: a long line used to be cut off on the left. The text rests centered on the whole bar, but
+    // the clip region sits off-center (it must stay clear of the date on the left), so only ~62% of
+    // the screen width was really usable. Now, per line: (1) if it fits centered on the bar, keep it
+    // truly centered; (2) otherwise center it within the clip region instead (uses the full width);
+    // (3) if it is still wider than the clip, shrink the font just enough to fit. Never cut off.
+    function fitSegment(centerOffsetPx) {
+        el.style.fontSize = '';                       // back to the CSS size before measuring
+        const clipW = clipEl.clientWidth;
+        const textW = el.offsetWidth;
+        const barRect = clipEl.parentElement.getBoundingClientRect();
+        const clipRect = clipEl.getBoundingClientRect();
+        const barCenter = barRect.left + barRect.width / 2;
+        const centeredMax = 2 * Math.min(barCenter - clipRect.left, clipRect.right - barCenter);
+        const margin = 12;
+        let offset = centerOffsetPx;
+        if (textW > centeredMax - margin) offset = 0; // center on the clip region itself
+        if (textW > clipW - margin) {
+            const px = parseFloat(getComputedStyle(el).fontSize) * ((clipW - margin) / textW);
+            el.style.fontSize = px + 'px';
+        }
+        return offset;
+    }
+
     while (true) {
         const offsetPx = getCenterOffsetPx();
         if (headerPause || headerLines.length === 0) {
+            el.style.fontSize = '';
             el.style.transition = 'none';
             el.style.transform = `translate(calc(-50% + ${offsetPx}px), -50%)`;
             el.textContent = SHUL_NAME;
@@ -2360,6 +2384,7 @@ async function runHeaderMarquee() {
         for (const seg of segments) {
             if (headerPause || headerLines.length === 0) break;
             el.textContent = seg;
+            const segOffsetPx = fitSegment(offsetPx);
 
             // Off-screen distance must clear the clip region's own width,
             // not just the text's own width — short text was barely
@@ -2370,20 +2395,20 @@ async function runHeaderMarquee() {
             const offScreenPx = clipWidthPx / 2 + textWidthPx / 2 + 20;
 
             el.style.transition = 'none';
-            el.style.transform = `translate(calc(-50% + ${offScreenPx}px + ${offsetPx}px), -50%)`;
+            el.style.transform = `translate(calc(-50% + ${offScreenPx}px + ${segOffsetPx}px), -50%)`;
             void el.offsetWidth;
 
             // One continuous, constant-feel motion the whole way in —
             // same easing as the exit, so entry and exit feel symmetric
             // rather than a slow reveal followed by a sudden speed-up.
             el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
-            el.style.transform = `translate(calc(-50% + ${offsetPx}px), -50%)`;
+            el.style.transform = `translate(calc(-50% + ${segOffsetPx}px), -50%)`;
             await headerSleep(HEADER_SCROLL_SECS * 1000);
 
             await headerSleep(HEADER_HOLD_SECS * 1000);
 
             el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
-            el.style.transform = `translate(calc(-50% - ${offScreenPx}px + ${offsetPx}px), -50%)`;
+            el.style.transform = `translate(calc(-50% - ${offScreenPx}px + ${segOffsetPx}px), -50%)`;
             await headerSleep(HEADER_SCROLL_SECS * 1000);
         }
     }
