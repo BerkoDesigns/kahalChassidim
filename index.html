@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9.7</title>
+<title>Bayswater Master Board - COMPLETE v3.9.8</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -2370,10 +2370,10 @@ async function runHeaderMarquee() {
     // the screen width was really usable. Now, per line: (1) if it fits centered on the bar, keep it
     // truly centered; (2) otherwise center it within the clip region instead (uses the full width);
     // (3) if it is still wider than the clip, shrink the font just enough to fit. Never cut off.
-    function fitSegment(centerOffsetPx) {
-        el.style.fontSize = '';                       // back to the CSS size before measuring
+    function fitSegment(elX, centerOffsetPx) {
+        elX.style.fontSize = '';                       // back to the CSS size before measuring
         const clipW = clipEl.clientWidth;
-        const textW = el.offsetWidth;
+        const textW = elX.offsetWidth;
         const barRect = clipEl.parentElement.getBoundingClientRect();
         const clipRect = clipEl.getBoundingClientRect();
         const barCenter = barRect.left + barRect.width / 2;
@@ -2382,19 +2382,35 @@ async function runHeaderMarquee() {
         let offset = centerOffsetPx;
         if (textW > centeredMax - margin) offset = 0; // center on the clip region itself
         if (textW > clipW - margin) {
-            const px = parseFloat(getComputedStyle(el).fontSize) * ((clipW - margin) / textW);
-            el.style.fontSize = px + 'px';
+            const px = parseFloat(getComputedStyle(elX).fontSize) * ((clipW - margin) / textW);
+            elX.style.fontSize = px + 'px';
         }
         return offset;
     }
 
+    // TWO text boxes take turns, so there is never an empty header: the moment the resting line starts leaving to the
+    // right, the next line starts entering from the left (same speed, same easing, so they keep a gap between them).
+    const elB = el.cloneNode(false);
+    elB.textContent = '';
+    elB.style.display = 'none';
+    clipEl.appendChild(elB);
+    const els = [el, elB];
+    let restIdx = -1;      // which box currently rests on screen (-1 = none)
+    let rest = null;       // its { off, travel }
+    const tx = (travel, off, dir) => `translate(calc(-50% ${dir < 0 ? '-' : '+'} ${travel}px + ${off}px), -50%)`;
+    const txCenter = (off) => `translate(calc(-50% + ${off}px), -50%)`;
+
     while (true) {
         const offsetPx = getCenterOffsetPx();
         if (headerPause || headerLines.length === 0) {
-            el.style.fontSize = '';
-            el.style.transition = 'none';
-            el.style.transform = `translate(calc(-50% + ${offsetPx}px), -50%)`;
-            el.textContent = normHebrewText(SHUL_NAME, false);
+            const e0 = els[restIdx >= 0 ? restIdx : 0], e1 = els[restIdx === 1 ? 0 : 1];
+            e1.style.display = 'none';
+            e0.style.display = '';
+            e0.style.fontSize = '';
+            e0.style.transition = 'none';
+            e0.style.transform = txCenter(offsetPx);
+            e0.textContent = normHebrewText(SHUL_NAME, false);
+            restIdx = -1; rest = null;
             await headerSleep(HEADER_IDLE_RECHECK_MS);
             continue;
         }
@@ -2402,37 +2418,35 @@ async function runHeaderMarquee() {
         const segments = [SHUL_NAME, ...headerLines];
         for (const seg of segments) {
             if (headerPause || headerLines.length === 0) break;
-            el.textContent = (seg === SHUL_NAME) ? normHebrewText(seg, false) : headerLineToText(seg);
-            const segOffsetPx = fitSegment(offsetPx);
+            const inIdx = (restIdx === 0) ? 1 : 0;
+            const inEl = els[inIdx];
+            inEl.style.display = '';
+            inEl.style.transition = 'none';
+            inEl.textContent = (seg === SHUL_NAME) ? normHebrewText(seg, false) : headerLineToText(seg);
+            const segOffsetPx = fitSegment(inEl, offsetPx);
 
-            // Off-screen distance must clear the clip region's own width,
-            // not just the text's own width — short text was barely
-            // moving at all before, so most of it was already visible
-            // right at the start instead of gradually revealing.
-            const clipWidthPx = clipEl.clientWidth;
-            const textWidthPx = el.offsetWidth;
-            const offScreenPx = clipWidthPx / 2 + textWidthPx / 2 + 20;
-            // The text rests off-centre inside the clip (segOffsetPx). Enter/exit must travel that extra offset too, or a word
-            // stays inside the clip when the line is hidden / pops in already visible. So: always clear the clip completely.
-            const travelPx = offScreenPx + Math.abs(segOffsetPx);
+            // Off-screen distance must clear the whole clip region, including the resting offset, so a line is fully hidden
+            // before it enters and fully gone after it leaves.
+            const offScreenPx = clipEl.clientWidth / 2 + inEl.offsetWidth / 2 + 20;
+            const inInfo = { off: segOffsetPx, travel: offScreenPx + Math.abs(segOffsetPx) };
 
-            el.style.transition = 'none';
             // enters from the LEFT, moving right: the right edge (= start of a Hebrew sentence) arrives first
-            el.style.transform = `translate(calc(-50% - ${travelPx}px + ${segOffsetPx}px), -50%)`;
-            void el.offsetWidth;
+            inEl.style.transform = tx(inInfo.travel, inInfo.off, -1);
+            void inEl.offsetWidth;
 
-            // One continuous, constant-feel motion the whole way in —
-            // same easing as the exit, so entry and exit feel symmetric
-            // rather than a slow reveal followed by a sudden speed-up.
-            el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
-            el.style.transform = `translate(calc(-50% + ${segOffsetPx}px), -50%)`;
+            const anim = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
+            inEl.style.transition = anim;
+            inEl.style.transform = txCenter(inInfo.off);
+            if (restIdx >= 0) {            // the previous line leaves to the RIGHT at the same moment
+                const oEl = els[restIdx];
+                oEl.style.transition = anim;
+                oEl.style.transform = tx(rest.travel, rest.off, +1);
+            }
             await headerSleep(HEADER_SCROLL_SECS * 1000);
+            if (restIdx >= 0) { els[restIdx].style.transition = 'none'; els[restIdx].style.display = 'none'; }
+            restIdx = inIdx; rest = inInfo;
 
             await headerSleep(HEADER_HOLD_SECS * 1000);
-
-            el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
-            el.style.transform = `translate(calc(-50% + ${travelPx}px + ${segOffsetPx}px), -50%)`;
-            await headerSleep(HEADER_SCROLL_SECS * 1000);
         }
     }
 }
