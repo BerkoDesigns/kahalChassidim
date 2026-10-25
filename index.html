@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9.3</title>
+<title>Bayswater Master Board - COMPLETE v3.9.7</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -19,7 +19,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&family=Suez+One&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&family=Miriam+Libre:wght@700&family=Suez+One&display=swap');
   :root {
     --gold:      #c29d6d;
     --gold-dark: #7a5e2a;
@@ -107,7 +107,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
     overflow: hidden;
   }
   .branding-shul {
-    font-family: 'Suez One', 'Frank Ruhl Libre', 'Arial Hebrew', serif;  /* Suez One (original) first; Suez One has NO vowel marks, so a line with nikud is drawn in the named fallback (Frank Ruhl Libre), not a random system font */
+    font-family: 'Suez One', 'Miriam Libre', serif;  /* Suez One letters; Suez One has no vowel marks, so Miriam Libre supplies them (chosen from Header_Board_Simulation row D) */
     font-size: 4.2vh; color: var(--gold-dark); font-weight: bold;
     position: absolute; left: 50%; top: 50%; white-space: nowrap;
     transform: translate(-50%, -50%);
@@ -2333,8 +2333,18 @@ const HEADER_IDLE_RECHECK_MS = 5000;
 // (U+FB1D-FB4F, e.g. a bet-with-dagesh as ONE character) or vowel marks in a non-standard order. A font often has no glyph
 // for those, so the browser silently draws that line (or part of it) in a different fallback font. NFC turns them into
 // ordinary letter + vowel-mark sequences in the standard order, which the header font draws properly.
-function normHebrewText(t) {
-    try { return String(t).replace(/[\u202a-\u202e\u2066-\u2069\ufeff]/g, '').normalize('NFC').replace(/[\u0591-\u05AF]/g, ''); } catch (e) { return t; }   // also drops Torah cantillation marks (U+0591-05AF): the header font cannot draw them
+function normHebrewText(t, keepVowels) {
+    try {
+        let s = String(t).replace(/[\u202a-\u202e\u2066-\u2069\ufeff]/g, '');
+        // NFD first so precomposed presentation forms (e.g. shin + dot) are split into letter + mark, then marks can be removed cleanly
+        s = (keepVowels ? s.normalize('NFC') : s.normalize('NFD').replace(/[\u05B0-\u05BD\u05BF\u05C1\u05C2\u05C7]/g, '').normalize('NFC'));
+        return s.replace(/[\u0591-\u05AF]/g, '').replace(/\u05BE/g, '-');   // always drops Torah cantillation (U+0591-05AF); vowels only when keepVowels is false
+    } catch (e) { return t; }
+}
+// A header line saved from the manager app with "Show vowels" ticked starts with the tag {nikud}. Without the tag, vowels are removed (default).
+function headerLineToText(seg) {
+    const m = /^\s*\{nikud\}\s*/i.exec(String(seg));
+    return m ? normHebrewText(String(seg).slice(m[0].length), true) : normHebrewText(seg, false);
 }
 
 function headerSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -2384,7 +2394,7 @@ async function runHeaderMarquee() {
             el.style.fontSize = '';
             el.style.transition = 'none';
             el.style.transform = `translate(calc(-50% + ${offsetPx}px), -50%)`;
-            el.textContent = normHebrewText(SHUL_NAME);
+            el.textContent = normHebrewText(SHUL_NAME, false);
             await headerSleep(HEADER_IDLE_RECHECK_MS);
             continue;
         }
@@ -2392,7 +2402,7 @@ async function runHeaderMarquee() {
         const segments = [SHUL_NAME, ...headerLines];
         for (const seg of segments) {
             if (headerPause || headerLines.length === 0) break;
-            el.textContent = normHebrewText(seg);
+            el.textContent = (seg === SHUL_NAME) ? normHebrewText(seg, false) : headerLineToText(seg);
             const segOffsetPx = fitSegment(offsetPx);
 
             // Off-screen distance must clear the clip region's own width,
@@ -2402,10 +2412,13 @@ async function runHeaderMarquee() {
             const clipWidthPx = clipEl.clientWidth;
             const textWidthPx = el.offsetWidth;
             const offScreenPx = clipWidthPx / 2 + textWidthPx / 2 + 20;
+            // The text rests off-centre inside the clip (segOffsetPx). Enter/exit must travel that extra offset too, or a word
+            // stays inside the clip when the line is hidden / pops in already visible. So: always clear the clip completely.
+            const travelPx = offScreenPx + Math.abs(segOffsetPx);
 
             el.style.transition = 'none';
             // enters from the LEFT, moving right: the right edge (= start of a Hebrew sentence) arrives first
-            el.style.transform = `translate(calc(-50% - ${offScreenPx}px + ${segOffsetPx}px), -50%)`;
+            el.style.transform = `translate(calc(-50% - ${travelPx}px + ${segOffsetPx}px), -50%)`;
             void el.offsetWidth;
 
             // One continuous, constant-feel motion the whole way in —
@@ -2418,7 +2431,7 @@ async function runHeaderMarquee() {
             await headerSleep(HEADER_HOLD_SECS * 1000);
 
             el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
-            el.style.transform = `translate(calc(-50% + ${offScreenPx}px + ${segOffsetPx}px), -50%)`;
+            el.style.transform = `translate(calc(-50% + ${travelPx}px + ${segOffsetPx}px), -50%)`;
             await headerSleep(HEADER_SCROLL_SECS * 1000);
         }
     }
