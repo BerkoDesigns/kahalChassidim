@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.8</title>
+<title>Bayswater Master Board - COMPLETE v3.9</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -19,7 +19,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Suez+One&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&family=Suez+One&display=swap');
   :root {
     --gold:      #c29d6d;
     --gold-dark: #7a5e2a;
@@ -107,7 +107,8 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
     overflow: hidden;
   }
   .branding-shul {
-    font-size: 4.2vh; color: var(--gold-dark); font-weight: bold;
+    font-family: 'Frank Ruhl Libre', 'Suez One', 'Arial Hebrew', serif;  /* has nikud (vowel marks) -> every header line looks the same */
+    font-size: 4.2vh; color: var(--gold-dark); font-weight: 900;
     position: absolute; left: 50%; top: 50%; white-space: nowrap;
     transform: translate(-50%, -50%);
   }
@@ -2395,7 +2396,8 @@ async function runHeaderMarquee() {
             const offScreenPx = clipWidthPx / 2 + textWidthPx / 2 + 20;
 
             el.style.transition = 'none';
-            el.style.transform = `translate(calc(-50% + ${offScreenPx}px + ${segOffsetPx}px), -50%)`;
+            // enters from the LEFT, moving right: the right edge (= start of a Hebrew sentence) arrives first
+            el.style.transform = `translate(calc(-50% - ${offScreenPx}px + ${segOffsetPx}px), -50%)`;
             void el.offsetWidth;
 
             // One continuous, constant-feel motion the whole way in —
