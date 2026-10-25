@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9.2</title>
+<title>Bayswater Master Board - COMPLETE v3.9.3</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -2334,7 +2334,7 @@ const HEADER_IDLE_RECHECK_MS = 5000;
 // for those, so the browser silently draws that line (or part of it) in a different fallback font. NFC turns them into
 // ordinary letter + vowel-mark sequences in the standard order, which the header font draws properly.
 function normHebrewText(t) {
-    try { return String(t).replace(/[\u202a-\u202e\u2066-\u2069\ufeff]/g, '').normalize('NFC'); } catch (e) { return t; }
+    try { return String(t).replace(/[\u202a-\u202e\u2066-\u2069\ufeff]/g, '').normalize('NFC').replace(/[\u0591-\u05AF]/g, ''); } catch (e) { return t; }   // also drops Torah cantillation marks (U+0591-05AF): the header font cannot draw them
 }
 
 function headerSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
