@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9</title>
+<title>Bayswater Master Board - COMPLETE v3.9.2</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -107,8 +107,8 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
     overflow: hidden;
   }
   .branding-shul {
-    font-family: 'Frank Ruhl Libre', 'Suez One', 'Arial Hebrew', serif;  /* has nikud (vowel marks) -> every header line looks the same */
-    font-size: 4.2vh; color: var(--gold-dark); font-weight: 900;
+    font-family: 'Suez One', 'Frank Ruhl Libre', 'Arial Hebrew', serif;  /* Suez One (original) first; Suez One has NO vowel marks, so a line with nikud is drawn in the named fallback (Frank Ruhl Libre), not a random system font */
+    font-size: 4.2vh; color: var(--gold-dark); font-weight: bold;
     position: absolute; left: 50%; top: 50%; white-space: nowrap;
     transform: translate(-50%, -50%);
   }
@@ -2329,6 +2329,14 @@ let HEADER_SCROLL_SECS = 1.0;   // slide transition speed (default; overridden b
 let HEADER_HOLD_SECS = 4.0;     // freeze time per line, fully visible (default; overridden likewise)
 const HEADER_IDLE_RECHECK_MS = 5000;
 
+// Header text can arrive from the sheet in odd Unicode (pasted from a PDF / website): Hebrew "presentation forms"
+// (U+FB1D-FB4F, e.g. a bet-with-dagesh as ONE character) or vowel marks in a non-standard order. A font often has no glyph
+// for those, so the browser silently draws that line (or part of it) in a different fallback font. NFC turns them into
+// ordinary letter + vowel-mark sequences in the standard order, which the header font draws properly.
+function normHebrewText(t) {
+    try { return String(t).replace(/[\u202a-\u202e\u2066-\u2069\ufeff]/g, '').normalize('NFC'); } catch (e) { return t; }
+}
+
 function headerSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function runHeaderMarquee() {
@@ -2376,7 +2384,7 @@ async function runHeaderMarquee() {
             el.style.fontSize = '';
             el.style.transition = 'none';
             el.style.transform = `translate(calc(-50% + ${offsetPx}px), -50%)`;
-            el.textContent = SHUL_NAME;
+            el.textContent = normHebrewText(SHUL_NAME);
             await headerSleep(HEADER_IDLE_RECHECK_MS);
             continue;
         }
@@ -2384,7 +2392,7 @@ async function runHeaderMarquee() {
         const segments = [SHUL_NAME, ...headerLines];
         for (const seg of segments) {
             if (headerPause || headerLines.length === 0) break;
-            el.textContent = seg;
+            el.textContent = normHebrewText(seg);
             const segOffsetPx = fitSegment(offsetPx);
 
             // Off-screen distance must clear the clip region's own width,
@@ -2410,7 +2418,7 @@ async function runHeaderMarquee() {
             await headerSleep(HEADER_HOLD_SECS * 1000);
 
             el.style.transition = `transform ${HEADER_SCROLL_SECS}s ease-in-out`;
-            el.style.transform = `translate(calc(-50% - ${offScreenPx}px + ${segOffsetPx}px), -50%)`;
+            el.style.transform = `translate(calc(-50% + ${offScreenPx}px + ${segOffsetPx}px), -50%)`;
             await headerSleep(HEADER_SCROLL_SECS * 1000);
         }
     }
@@ -2441,7 +2449,8 @@ setInterval(() => {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 const WEBHOOK_URL = "https://hook.us2.make.com/ijc6xvez7qvqex9v8gxir9bdutbxwlu8";
-let lastSentKey = localStorage.getItem('bayswater_lastSentKey') || "";
+let lastSentKey = "";
+try { lastSentKey = localStorage.getItem('bayswater_lastSentKey') || ""; } catch(e) {}   // storage may be blocked (sandboxed preview)
 
 function checkAndCapture(force = false) {
     const now = new Date();
@@ -2463,7 +2472,7 @@ function checkAndCapture(force = false) {
     if (force || (isTargetTime && lastSentKey !== currentKey)) {
         if (!force) {
             lastSentKey = currentKey;
-            localStorage.setItem('bayswater_lastSentKey', currentKey);
+            try { localStorage.setItem('bayswater_lastSentKey', currentKey); } catch(e) {}
         }
         html2canvas(document.body, { useCORS: true, allowTaint: false }).then(canvas => {
            const base64Image = canvas.toDataURL("image/jpeg", 0.7).replace(/^data:image\/jpeg;base64,/, "");
