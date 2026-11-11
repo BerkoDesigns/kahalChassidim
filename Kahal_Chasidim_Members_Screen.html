@@ -57,7 +57,7 @@ function load(visible){ if(visible) splash(true);
   chk(function(g){ $('tv').style.display=g?'block':'none'; $('msg').style.display=g?'none':'block'; $('chip').className='chip'+(g?'':' off'); $('chip').textContent=g?'● Live':'● Not available';
     if(!g){ splash(false); return; }
     var tv=$('tv'), nf=document.createElement('iframe'); nf.title='Live board'; nf.setAttribute('scrolling','no'); nf.style.visibility='hidden';
-    var done=false, t0=Date.now(), dataAt=0, MIN_WAIT=9000;
+    var done=false, t0=Date.now(), dataAt=0, MIN_WAIT=9500;
     function reveal(){ if(done) return; done=true; var old=tv.querySelector('iframe[data-live]'); nf.style.visibility='visible'; nf.setAttribute('data-live','1'); if(old&&old!==nf) old.remove(); fit(); splash(false); }
     function ready(){ try{ var w=nf.contentWindow, d=nf.contentDocument; if(!d||!w) return null;
         var es=w.performance.getEntriesByType('resource'), got=false;
