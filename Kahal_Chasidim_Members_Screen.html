@@ -57,7 +57,7 @@ function load(visible){ if(visible) splash(true);
   chk(function(g){ $('tv').style.display=g?'block':'none'; $('msg').style.display=g?'none':'block'; $('chip').className='chip'+(g?'':' off'); $('chip').textContent=g?'● Live':'● Not available';
     if(!g){ splash(false); return; }
     var tv=$('tv'), nf=document.createElement('iframe'); nf.title='Live board'; nf.setAttribute('scrolling','no'); nf.style.visibility='hidden';
-    var done=false, t0=Date.now(), dataAt=0;
+    var done=false, t0=Date.now(), dataAt=0, MIN_WAIT=8000;
     function reveal(){ if(done) return; done=true; var old=tv.querySelector('iframe[data-live]'); nf.style.visibility='visible'; nf.setAttribute('data-live','1'); if(old&&old!==nf) old.remove(); fit(); splash(false); }
     function ready(){ try{ var w=nf.contentWindow, d=nf.contentDocument; if(!d||!w) return null;
         var es=w.performance.getEntriesByType('resource'), got=false;
@@ -68,8 +68,8 @@ function load(visible){ if(visible) splash(true);
         return pend===0 && fontsOk && Date.now()-dataAt>1500;
       }catch(e){ return null; } }
     function poll(){ if(done) return; var r=ready(), age=Date.now()-t0;
-      if(r===true) return setTimeout(reveal,400);
-      if(r===null && age>7000) return reveal();   /* cannot look inside (other address): wait a fixed time */
+      if(r===true && age>=MIN_WAIT) return setTimeout(reveal,400);
+      if(r===null && age>=MIN_WAIT) return reveal();   /* cannot look inside (other address): wait a fixed time */
       if(age>25000) return reveal();
       setTimeout(poll,300); }
     function show(){ poll(); }
