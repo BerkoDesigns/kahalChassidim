@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9.12</title>
+<title>Bayswater Master Board - COMPLETE v3.9.13</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -2360,7 +2360,7 @@ function normHebrewText(t, keepVowels) {
 /* ── LINE STYLES (Nov 2026): a line may start with {{c=red;b=1;f=serif}} (color, bold, font). No marker = unchanged. ── */
 var ST_FONT = { serif: "'Frank Ruhl Libre','Arial Hebrew',serif", modern: "'Heebo','Assistant',sans-serif", display: "'Suez One','Arial Hebrew',serif" };
 var ST_COL  = { red: '#C0392B', gold: '#B8860B', blue: '#1F5FA8', green: '#2E7D4F', purple: '#7B3FA0' };
-var ST_SC = { serif: 1, modern: 1, display: 0.82 };  /* size corrections so a chosen font looks the same size as the normal text; re-measured on the real fonts below */
+var ST_SC = { serif: 1.12, modern: 1.12, display: 1 };  /* size corrections so a chosen font looks the same size as the normal text; re-measured on the real fonts below */
 var ST_INIT = false;
 function stMeasure() {
     try {
@@ -2395,7 +2395,8 @@ function stLinesHTML(text, gold) {
         var h = p.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         if (gold && !p.col) h = h.replace(/(\b\d{1,2}:\d{2}\b)/g, '<span class="time-gold">$1</span>');
         var sc = (p.fk ? (ST_SC[p.fk] || 1) : 1) * p.sz;
-        var css = (p.col ? 'color:' + p.col + ';' : '') + (p.wt && p.fk !== 'display' ? 'font-weight:' + p.wt + ';' : '') + (p.fam ? 'font-family:' + p.fam + ';' : '') + (Math.abs(sc - 1) > 0.01 ? 'font-size:' + sc.toFixed(3) + 'em;' : '');
+        /* the boards have a rule that sizes EVERY span inside the text boxes (fixed font-size, display:block), so a styled line must override it: inline, same size as the box text, inherit whatever was not chosen */
+        var css = (p.col || p.wt || p.fam || Math.abs(sc - 1) > 0.01) ? 'display:inline;width:auto;line-height:inherit;font-size:' + sc.toFixed(3) + 'em;color:' + (p.col || 'inherit') + ';font-weight:' + ((p.wt && p.fk !== 'display') ? p.wt : 'inherit') + ';font-family:' + (p.fam || 'inherit') + ';' : '';
         return css ? '<span style="' + css + '">' + h + '</span>' : h;
     }).join('<br>');
 }
