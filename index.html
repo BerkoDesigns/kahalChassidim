@@ -2360,15 +2360,32 @@ function normHebrewText(t, keepVowels) {
 /* ── LINE STYLES (Nov 2026): a line may start with {{c=red;b=1;f=serif}} (color, bold, font). No marker = unchanged. ── */
 var ST_FONT = { serif: "'Frank Ruhl Libre','Arial Hebrew',serif", modern: "'Heebo','Assistant',sans-serif", display: "'Suez One','Arial Hebrew',serif" };
 var ST_COL  = { red: '#C0392B', gold: '#B8860B', blue: '#1F5FA8', green: '#2E7D4F', purple: '#7B3FA0' };
+var ST_SC = { serif: 1, modern: 1, display: 0.82 };  /* size corrections so a chosen font looks the same size as the normal text; re-measured on the real fonts below */
+var ST_INIT = false;
+function stMeasure() {
+    try {
+        var be = document.getElementById('ANN'); if (!be) return;
+        var cs = getComputedStyle(be), cx = document.createElement('canvas').getContext('2d'), T = 'אבגדהוזחטיכלמנסעפצקרשת';
+        var hh = function (font) { cx.font = font; var m = cx.measureText(T); return (m.actualBoundingBoxAscent || 0) + (m.actualBoundingBoxDescent || 0); };
+        var base = hh((cs.fontWeight || '700') + ' 100px ' + cs.fontFamily); if (!base) return;
+        Object.keys(ST_FONT).forEach(function (k) { var x = hh((k === 'display' ? '400' : '700') + ' 100px ' + ST_FONT[k]); if (x > 0) ST_SC[k] = Math.max(0.6, Math.min(1.4, base / x)); });
+    } catch (e) {}
+}
+function stInit() {
+    if (ST_INIT) return; ST_INIT = true;
+    try { Promise.all(Object.keys(ST_FONT).map(function (k) { return document.fonts.load('700 40px ' + ST_FONT[k], 'א'); })).then(stMeasure, stMeasure); } catch (e) {}
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', stInit); else stInit();
 function stParse(line) {
-    var m = /^\{\{([^}]*)\}\}/.exec(line), o = { text: line, col: '', fam: '', wt: '' };
+    var m = /^\{\{([^}]*)\}\}/.exec(line), o = { text: line, col: '', fam: '', wt: '', fk: '', sz: 1 };
     if (!m) return o;
     o.text = line.slice(m[0].length);
     m[1].split(';').forEach(function (p) {
         var kv = p.split('='), k = (kv[0] || '').trim(), v = (kv[1] || '').trim();
         if (k === 'c' && ST_COL[v]) o.col = ST_COL[v];
         else if (k === 'b' && v === '1') o.wt = '900';
-        else if (k === 'f' && ST_FONT[v]) o.fam = ST_FONT[v];
+        else if (k === 'f' && ST_FONT[v]) { o.fam = ST_FONT[v]; o.fk = v; }
+        else if (k === 's' && v === 'l') o.sz = 1.25;
     });
     return o;
 }
@@ -2377,7 +2394,8 @@ function stLinesHTML(text, gold) {
         var p = stParse(ln);
         var h = p.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         if (gold && !p.col) h = h.replace(/(\b\d{1,2}:\d{2}\b)/g, '<span class="time-gold">$1</span>');
-        var css = (p.col ? 'color:' + p.col + ';' : '') + (p.wt ? 'font-weight:' + p.wt + ';' : '') + (p.fam ? 'font-family:' + p.fam + ';' : '');
+        var sc = (p.fk ? (ST_SC[p.fk] || 1) : 1) * p.sz;
+        var css = (p.col ? 'color:' + p.col + ';' : '') + (p.wt && p.fk !== 'display' ? 'font-weight:' + p.wt + ';' : '') + (p.fam ? 'font-family:' + p.fam + ';' : '') + (Math.abs(sc - 1) > 0.01 ? 'font-size:' + sc.toFixed(3) + 'em;' : '');
         return css ? '<span style="' + css + '">' + h + '</span>' : h;
     }).join('<br>');
 }
