@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9.11</title>
+<title>Bayswater Master Board - COMPLETE v3.9.12</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
@@ -19,7 +19,7 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&family=Miriam+Libre:wght@700&family=Suez+One&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&family=Miriam+Libre:wght@700&family=Suez+One&family=Heebo:wght@400;700;900&display=swap');
   :root {
     --gold:      #c29d6d;
     --gold-dark: #7a5e2a;
@@ -1128,6 +1128,7 @@ function fitExpand(el, vhStart, vhMax) {
 }
 
 function makeTimesGoldHTML(text) {
+    if (/\{\{/.test(text)) return stLinesHTML(text, true);
     let clean = text.replace(/\r/g, "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -2356,11 +2357,42 @@ function normHebrewText(t, keepVowels) {
     } catch (e) { return t; }
 }
 // A header line saved from the manager app with "Show vowels" ticked starts with the tag {nikud}. Without the tag, vowels are removed (default).
+/* ── LINE STYLES (Nov 2026): a line may start with {{c=red;b=1;f=serif}} (color, bold, font). No marker = unchanged. ── */
+var ST_FONT = { serif: "'Frank Ruhl Libre','Arial Hebrew',serif", modern: "'Heebo','Assistant',sans-serif", display: "'Suez One','Arial Hebrew',serif" };
+var ST_COL  = { red: '#C0392B', gold: '#B8860B', blue: '#1F5FA8', green: '#2E7D4F', purple: '#7B3FA0' };
+function stParse(line) {
+    var m = /^\{\{([^}]*)\}\}/.exec(line), o = { text: line, col: '', fam: '', wt: '' };
+    if (!m) return o;
+    o.text = line.slice(m[0].length);
+    m[1].split(';').forEach(function (p) {
+        var kv = p.split('='), k = (kv[0] || '').trim(), v = (kv[1] || '').trim();
+        if (k === 'c' && ST_COL[v]) o.col = ST_COL[v];
+        else if (k === 'b' && v === '1') o.wt = '900';
+        else if (k === 'f' && ST_FONT[v]) o.fam = ST_FONT[v];
+    });
+    return o;
+}
+function stLinesHTML(text, gold) {
+    return String(text).replace(/\r/g, '').split('\n').map(function (ln) {
+        var p = stParse(ln);
+        var h = p.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (gold && !p.col) h = h.replace(/(\b\d{1,2}:\d{2}\b)/g, '<span class="time-gold">$1</span>');
+        var css = (p.col ? 'color:' + p.col + ';' : '') + (p.wt ? 'font-weight:' + p.wt + ';' : '') + (p.fam ? 'font-family:' + p.fam + ';' : '');
+        return css ? '<span style="' + css + '">' + h + '</span>' : h;
+    }).join('<br>');
+}
 function headerLineToText(seg) {
     const m = /^\s*\{nikud\}\s*/i.exec(String(seg));
     return m ? normHebrewText(String(seg).slice(m[0].length), true) : normHebrewText(seg, false);
 }
 
+function stHeaderSet(el, seg, shulName) {
+    if (seg === shulName) { el.textContent = normHebrewText(seg, false); el.style.color = ''; el.style.fontFamily = ''; el.style.fontWeight = ''; return; }
+    var raw = String(seg), nk = /^\s*\{nikud\}\s*/i.exec(raw);
+    var p = stParse(nk ? raw.slice(nk[0].length) : raw);
+    el.textContent = headerLineToText((nk ? '{nikud} ' : '') + p.text);
+    el.style.color = p.col; el.style.fontFamily = p.fam; el.style.fontWeight = p.wt;
+}
 function headerSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function runHeaderMarquee() {
@@ -2436,7 +2468,7 @@ async function runHeaderMarquee() {
             const inEl = els[inIdx];
             inEl.style.display = '';
             inEl.style.transition = 'none';
-            inEl.textContent = (seg === SHUL_NAME) ? normHebrewText(seg, false) : headerLineToText(seg);
+            stHeaderSet(inEl, seg, SHUL_NAME);
             const segOffsetPx = fitSegment(inEl, offsetPx);
 
             // Off-screen distance must clear the whole clip region, including the resting offset, so a line is fully hidden
