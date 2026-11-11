@@ -2218,12 +2218,12 @@ function loadData() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     
-    fetch(SCRIPT_URL + "?cb=" + new Date().getTime(), { signal: controller.signal })
+    fetch(SCRIPT_URL + "?cb=" + new Date().getTime() + (/[?&]draft=1/.test(location.search) ? "&mode=draft" : ""), { signal: controller.signal })   // manager-app Draft preview adds &draft=1
     .then(r => r.json())
     .then(d => {
         clearTimeout(timeout);
         if (!d || !d.schedule) return;
-        try { localStorage.setItem('bayswater_cache', JSON.stringify(d)); } catch(e) {}
+        if (!/[?&]preview=1/.test(location.search)) { try { localStorage.setItem('bayswater_cache', JSON.stringify(d)); } catch(e) {} }
         schedule = d.schedule;
         computeSeasonDates();
         defaultSummerMsg = d.defaultMsg || "";
@@ -2483,7 +2483,7 @@ function updateFsBtn() {
   // Auto-reload daily at 4 AM to pick up code updates
 setInterval(() => {
     const now = new Date();
-    if (now.getHours() === 4 && now.getMinutes() < 5) location.reload();
+    if (!/[?&]preview=1/.test(location.search) && now.getHours() === 4 && now.getMinutes() < 5) location.reload();   // PREVIEW_GUARD: the manager-app preview never reloads/sends
 }, 60000);
 </script>
  <!-- ── SCREENSHOT SYSTEM ─────────────────────────────────── -->
@@ -2494,6 +2494,7 @@ let lastSentKey = "";
 try { lastSentKey = localStorage.getItem('bayswater_lastSentKey') || ""; } catch(e) {}   // storage may be blocked (sandboxed preview)
 
 function checkAndCapture(force = false) {
+    if (/[?&]preview=1/.test(location.search)) return;   // PREVIEW_GUARD: the manager-app preview must never send screenshots
     const now = new Date();
     const day = now.getDay();
     const hour = now.getHours();
