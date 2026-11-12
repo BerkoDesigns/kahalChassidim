@@ -2,8 +2,12 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9.13</title>
+<title>Bayswater Master Board - COMPLETE v3.9.14</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<script>/* PREVIEW_ASOF: the manager-app "This Shabbos" preview opens the board with &preview=1&asof=YYYY-MM-DDTHH:MM:SS, and the board then behaves as if it were that moment. The TV never has these in its address, so it is unaffected. */
+(function(){try{var q=location.search;if(!/[?&]preview=1/.test(q))return;var m=/[?&]asof=([^&]+)/.exec(q);if(!m)return;var RD=Date,t=new RD(decodeURIComponent(m[1])).getTime();if(isNaN(t))return;var off=t-RD.now();
+class FD extends RD{constructor(...a){if(a.length===0)super(RD.now()+off);else super(...a);}static now(){return RD.now()+off;}}
+window.Date=FD;}catch(e){}})();</script>
 <script>
 // Chrome-compatible test panel loader — visiting the board with ?test=1
 // (or #test=1) appended auto-loads mobile_date_tester.js. Chrome on
@@ -2248,7 +2252,7 @@ function loadData() {
             rotateP1();
             p1RotateTimer = setInterval(rotateP1, 15000);
         }
-        setDataBox('ANN', d.announcements || "", d.annHeader !== false);
+        setDataBox('ANN', stDropOff(d.announcements || ""), d.annHeader !== false);
         setDataBox('TEF', d.tefila || "", d.tefHeader !== false);
         // REAL BUG FIXED: this used to unconditionally reassign .src on
         // every loadData() call (every 2 minutes), even when the image
@@ -2300,7 +2304,7 @@ function loadData() {
                 shabbosPic  = d.shabbosPic || "";
                 p1Rotation  = d.p1Rotation !== false;
                 activeImageId = d.activeImageId || "";
-                setDataBox('ANN', d.announcements || "", d.annHeader !== false);
+                setDataBox('ANN', stDropOff(d.announcements || ""), d.annHeader !== false);
                 setDataBox('TEF', d.tefila || "", d.tefHeader !== false);
                 if (d.p4 && d.p4 !== lastP4Id) { $('p4').src = "https://lh3.googleusercontent.com/d/" + d.p4 + "=w1200"; lastP4Id = d.p4; }
                 if (d.p5 && d.p5 !== lastP5Id) { $('p5').src = "https://lh3.googleusercontent.com/d/" + d.p5 + "=w1200"; lastP5Id = d.p5; }
@@ -2376,6 +2380,10 @@ function stInit() {
     try { Promise.all(Object.keys(ST_FONT).map(function (k) { return document.fonts.load('700 40px ' + ST_FONT[k], 'א'); })).then(stMeasure, stMeasure); } catch (e) {}
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', stInit); else stInit();
+function stDropOff(t) {   /* a line marked x=1 is switched off in the manager app: not shown, but kept in the list */
+    var s = String(t == null ? '' : t); if (s.indexOf('{{') < 0) return s;
+    return s.split('\n').filter(function (l) { return !/^\{\{(?:[^}]*;)?x=1(?:;[^}]*)?\}\}/.test(l); }).join('\n');
+}
 function stParse(line) {
     var m = /^\{\{([^}]*)\}\}/.exec(line), o = { text: line, col: '', fam: '', wt: '', fk: '', sz: 1 };
     if (!m) return o;
