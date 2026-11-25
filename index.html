@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9.14</title>
+<title>Bayswater Master Board - COMPLETE v3.9.16</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>/* PREVIEW_ASOF: the manager-app "This Shabbos" preview opens the board with &preview=1&asof=YYYY-MM-DDTHH:MM:SS, and the board then behaves as if it were that moment. The TV never has these in its address, so it is unaffected. */
 (function(){try{var q=location.search;if(!/[?&]preview=1/.test(q))return;var m=/[?&]asof=([^&]+)/.exec(q);if(!m)return;var RD=Date,t=new RD(decodeURIComponent(m[1])).getTime();if(isNaN(t))return;var off=t-RD.now();
@@ -301,6 +301,16 @@ if (location.search.indexOf('test=1') !== -1 || location.hash.indexOf('test=1') 
   #omer-pic { width: 100%; height: 100%; object-fit: fill; position: absolute; top: 0; left: 0; border-radius: 8px; }
   #O2 { color: #1a4a3a; font-weight: 600; line-height: 1.3; width: 96%; display: block; margin: 0 auto; word-wrap: break-word; overflow: hidden; font-size: 3.8vh; }
   #O_BECHINA { font-size: 3.5vh; color: #1a4a3a; border-top: 1px solid #a0c8c0; padding-top: 2px; margin-top: 4px; width: 96%; overflow: hidden; }
+
+  /* ── v3.9.15: Chanukah menorah in the Omer box ───────────────── */
+  .omer-box.has-mn #O2 { width: 100%; height: 100%; flex: 1; padding: 0; line-height: 1.1; font-size: inherit; }
+  .mn { display:flex; flex-direction:column; align-items:center; justify-content:center;
+        width:100%; height:100%; gap:0.3vh; padding:0.8vh 8px; overflow:hidden; direction:rtl; }
+  .mn svg { height: calc(22vh * var(--ds, 1)); width:auto; flex-shrink:0; }
+  .mn .nl { font-size: calc(4.2vh * var(--ds, 1)); font-weight:900; color:#1a1a1a; line-height:1.1; white-space:nowrap; flex-shrink:0; }
+  .mn .gr { font-size: calc(3.6vh * var(--ds, 1)); font-weight:800; color:#8a5a10; line-height:1.1; white-space:nowrap; flex-shrink:0; }
+  .mn .dl { font-size: calc(3.2vh * var(--ds, 1)); font-weight:700; color:#1a4a3a; line-height:1.2; text-align:center; white-space:pre-line; flex-shrink:0; max-width:100%; }
+  .mn .dv { width:75%; height:2px; min-height:2px; flex-shrink:0; background:#b08a4a; margin:0.5vh 0; }
   
   /* RULE 5: NIGHT MODE ──────────────────────────────────────────────────────────────── */
   #SLEEP_OVERLAY { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10000; display: none; }
@@ -1280,6 +1290,83 @@ function rotateP1() {
 }
 
 // ── MAIN UI UPDATE (ALL RULES) ─────────────────────────────────────────────────────────
+// ── v3.9.15: CHANUKAH MENORAH (Omer box) ───────────────────────────
+// Night number changes at shkia (z[9]); on Friday it switches from Plag
+// (z[8]) because the candles are lit before Shabbos. Uses the civil date and
+// today's own row. Valid nights 1..8, otherwise 0 (menorah off).
+const CHANUKAH_NIGHT_NAMES = ['','ראשון','שני','שלישי','רביעי','חמישי','ששי','שביעי','שמיני'];
+function getChanukahNight(nowD, todayIso, cSecNow, entry) {
+    if (!entry || !entry.z) return 0;
+    const k25 = findKislev25Iso(todayIso);
+    if (!k25) return 0;
+    const diff = Math.round((isoToNoonUTC(todayIso).getTime() - isoToNoonUTC(k25).getTime()) / 86400000);
+    if (diff < -1 || diff > 7) return 0;
+    const shkia = getSec(entry.z[9], true);
+    if (!shkia) return 0;
+    let after = cSecNow >= shkia;
+    if (!after && nowD.getDay() === 5) {
+        const plag = getSec(entry.z[8], true);
+        if (plag > 0 && cSecNow >= plag) after = true;
+    }
+    const n = diff + (after ? 2 : 1);
+    return (n >= 1 && n <= 8) ? n : 0;
+}
+const MN_DEFS = `<defs>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5e4308"/><stop offset=".18" stop-color="#b98a1c"/><stop offset=".38" stop-color="#f6df8a"/><stop offset=".52" stop-color="#d9a92e"/><stop offset=".78" stop-color="#8f6710"/><stop offset="1" stop-color="#4f3806"/></linearGradient>
+<linearGradient id="goldv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3d77e"/><stop offset=".4" stop-color="#c8962a"/><stop offset="1" stop-color="#6e4e0c"/></linearGradient>
+<linearGradient id="glass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#cfe0e6" stop-opacity=".75"/><stop offset=".25" stop-color="#ffffff" stop-opacity=".25"/><stop offset=".7" stop-color="#e8f2f5" stop-opacity=".18"/><stop offset="1" stop-color="#a9c0c8" stop-opacity=".7"/></linearGradient>
+<linearGradient id="oil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a0"/><stop offset=".25" stop-color="#f2bf34"/><stop offset="1" stop-color="#b8780c"/></linearGradient>
+<linearGradient id="oil0" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6ebc0"/><stop offset="1" stop-color="#d9c27a"/></linearGradient>
+<radialGradient id="halo"><stop offset="0" stop-color="#ffcf5a" stop-opacity=".8"/><stop offset=".5" stop-color="#ffb030" stop-opacity=".25"/><stop offset="1" stop-color="#ffb030" stop-opacity="0"/></radialGradient>
+<radialGradient id="flo" cx=".5" cy=".75" r=".7"><stop offset="0" stop-color="#fff6c8"/><stop offset=".35" stop-color="#ffd25a"/><stop offset=".75" stop-color="#f08a14"/><stop offset="1" stop-color="#d8560a" stop-opacity=".0"/></radialGradient>
+<filter id="bl"><feGaussianBlur stdDeviation=".9"/></filter><filter id="bl2"><feGaussianBlur stdDeviation="4"/></filter>
+<filter id="sh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".35"/></filter>
+</defs>`;
+function mnFlame(x,top){const y=top;return `<circle cx="${x}" cy="${y-14}" r="26" fill="url(#halo)"/>
+<path d="M${x} ${y-32} C${x+3} ${y-24} ${x+9} ${y-17} ${x+8} ${y-9} C${x+7.5} ${y-3} ${x+4} ${y-1} ${x} ${y-1} C${x-4} ${y-1} ${x-7.5} ${y-3} ${x-8} ${y-9} C${x-9} ${y-17} ${x-3} ${y-24} ${x} ${y-32}Z" fill="url(#flo)" filter="url(#bl)"/>
+<path d="M${x} ${y-18} C${x+2.5} ${y-13} ${x+3.5} ${y-8} ${x} ${y-3} C${x-3.5} ${y-8} ${x-2.5} ${y-13} ${x} ${y-18}Z" fill="#fffbe0" opacity=".9" filter="url(#bl)"/>
+<path d="M${x} ${y-6} C${x+2} ${y-5} ${x+2} ${y-2} ${x} ${y-1} C${x-2} ${y-2} ${x-2} ${y-5} ${x} ${y-6}Z" fill="#5a7fd0" opacity=".55"/>`}
+function mnCup(x,top,lit){const h=28,w1=12,w2=9;
+ let s=`<g filter="url(#sh)">`;
+ s+=`<path d="M${x-w1} ${top} L${x-w2} ${top+h} Q${x} ${top+h+2.5} ${x+w2} ${top+h} L${x+w1} ${top}Z" fill="url(#glass)" stroke="#8fa8b0" stroke-width="1"/></g>`;
+ s+=`<path d="M${x-w1+1.7} ${top+8} L${x-w2} ${top+h} Q${x} ${top+h+2.5} ${x+w2} ${top+h} L${x+w1-1.7} ${top+8}Q${x} ${top+11} ${x-w1+1.7} ${top+8}Z" fill="url(#${lit?'oil':'oil0'})" opacity="${lit?1:.8}"/>`;
+ s+=`<ellipse cx="${x}" cy="${top+8.6}" rx="${w1-1.7}" ry="1.8" fill="${lit?'#fff0b0':'#fff8e0'}" opacity=".85"/>`;
+ s+=`<ellipse cx="${x}" cy="${top}" rx="${w1}" ry="2.4" fill="none" stroke="#b9ced4" stroke-width="1.1"/>`;
+ s+=`<rect x="${x-w1+2.2}" y="${top+2}" width="2" height="${h-8}" rx="1" fill="#fff" opacity=".55"/>`;
+ s+=`<path d="M${x-.7} ${top+8} V${top-7}" stroke="#2c2110" stroke-width="1.6"/><rect x="${x-3}" y="${top+4}" width="6" height="2.2" fill="#c9b98a" opacity=".8"/>`;
+ return s+(lit?mnFlame(x,top-6):'')}
+function menorahSVG(n){let s=`<svg viewBox="0 0 330 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${MN_DEFS}`;const cx=165,base=156;
+ for(let i=1;i<=4;i++){const d=i*34;for(const sg of[-1,1]){const x=cx+sg*d;s+=`<path d="M${x} 104 V118 C${x} ${base-8} ${cx+sg*6} ${base-14} ${cx} ${base-14}" fill="none" stroke="#4a3306" stroke-width="9" stroke-linecap="round" opacity=".35" transform="translate(1.5 2)"/><path d="M${x} 104 V118 C${x} ${base-8} ${cx+sg*6} ${base-14} ${cx} ${base-14}" fill="none" stroke="url(#goldv)" stroke-width="7.5" stroke-linecap="round"/><path d="M${x-1.6} 104 V118 C${x-1.6} ${base-10} ${cx+sg*6} ${base-16} ${cx} ${base-16}" fill="none" stroke="#fff3b8" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>`}}
+ s+=`<rect x="${cx-5.5}" y="82" width="11" height="${base-82}" fill="url(#gold)"/><ellipse cx="${cx}" cy="${base-28}" rx="9" ry="7" fill="url(#gold)"/><ellipse cx="${cx}" cy="${base-52}" rx="6.5" ry="5" fill="url(#gold)"/>`;
+ s+=`<path d="M${cx-9} ${base} Q${cx-11} ${base+14} ${cx-48} ${base+19} H${cx+48} Q${cx+11} ${base+14} ${cx+9} ${base}Z" fill="url(#gold)"/><rect x="${cx-58}" y="${base+19}" width="116" height="10" rx="5" fill="url(#gold)"/><ellipse cx="${cx}" cy="${base+31}" rx="62" ry="3.5" fill="#000" opacity=".22" filter="url(#bl2)"/>`;
+ for(let i=-4;i<=4;i++){const x=cx+i*34,sham=i===0;const top=sham?56:80;let lit=sham;if(!sham){const k=(i<0)?(i+4):(i+3);lit=(k>=8-n)}
+  s+=`<rect x="${x-9}" y="${top+25}" width="18" height="6" rx="3" fill="url(#gold)"/>`+mnCup(x,top,lit)}
+ return s+'</svg>'}
+// Same Molad text clean-up the normal Omer-box Molad branch does, used only for the menorah view.
+function fmtMoledForMenorah(moledText) {
+    let f = moledText;
+    if (moledText.includes("מולד חודש")) {
+        let ci = moledText.indexOf(":");
+        if (ci !== -1) f = moledText.substring(0, ci + 1) + "\n" + moledText.substring(ci + 1).trim();
+    }
+    f = f.replace(/\s*>\s*/g, " ");
+    f = f.replace(/\s*◈\s*/g, "\n◈\n");
+    return f;
+}
+// Shrink-only: if the menorah + Molad text is taller/wider than the box, scale everything down until it fits.
+function fitMenorah() {
+    const o = document.getElementById('O2');
+    const w = o && o.querySelector('.mn');
+    if (!w) return;
+    let sc = 1;
+    w.style.setProperty('--ds', sc);
+    const over = () => w.scrollHeight > w.clientHeight + 1 || w.scrollWidth > w.clientWidth + 1 ||
+        Array.from(w.querySelectorAll('.nl,.gr,.dl')).some(e => e.scrollWidth > w.clientWidth);
+    while (over() && sc > 0.4) { sc = Math.round((sc - 0.04) * 100) / 100; w.style.setProperty('--ds', sc); }
+}
+window.addEventListener('resize', () => { setTimeout(fitMenorah, 50); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { setTimeout(fitMenorah, 50); });
+
 function updateUI() {
     let now = new Date();
     
@@ -1448,7 +1535,29 @@ function updateUI() {
     
     let omerKey     = dOmer.omerNum ? String(dOmer.omerNum).trim() : null;
 
-    if (isHolidayStayAwake) {
+    let chanukahN = getChanukahNight(now, getIso(now), cSec, dToday);
+    $('OMER').classList.toggle('has-mn', chanukahN > 0);
+    if (chanukahN > 0) {
+        // v3.9.15: Chanukah menorah replaces whatever the Omer box shows (picture, Omer, default message) for the 8 days.
+        let oldPicMn = document.getElementById('omer-pic');
+        if (oldPicMn) oldPicMn.remove();
+        $('O_BECHINA').style.display = 'none';
+        let mnLine = "";
+        if (isMoledDisplay) mnLine = fmtMoledForMenorah(moledText);
+        let mnKey = chanukahN + "|" + mnLine;
+        if ($('O2').dataset.mk !== mnKey || !$('O2').querySelector('.mn')) {
+            $('O2').dataset.mk = mnKey;
+            $('O2').style.fontSize = '';
+            $('O2').innerHTML = '<div class="mn">' + menorahSVG(chanukahN) + '<div class="nl">נר ' + CHANUKAH_NIGHT_NAMES[chanukahN] + ' של חנוכה</div>' +
+                '<div class="gr">א פרייליכען חנוכה</div>' +
+                (mnLine ? '<div class="dv"></div><div class="dl"></div>' : '') + '</div>';
+            let dlEl = $('O2').querySelector('.dl');
+            if (dlEl) dlEl.textContent = mnLine;
+            fitMenorah();
+            setTimeout(fitMenorah, 200);
+        }
+    } else if (isHolidayStayAwake) {
+        delete $('O2').dataset.mk;
         // RULE 6: Shavuot special message
         $('O2').innerText = "🌸 זמן מתן תורתינו 🌸\nא פרייליכען יום טוב שבועות 🌺";
         $('O_BECHINA').style.display = 'none';
