@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Bayswater Master Board - COMPLETE v3.9.16</title>
+<title>Bayswater Master Board - COMPLETE v3.9.17</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>/* PREVIEW_ASOF: the manager-app "This Shabbos" preview opens the board with &preview=1&asof=YYYY-MM-DDTHH:MM:SS, and the board then behaves as if it were that moment. The TV never has these in its address, so it is unaffected. */
 (function(){try{var q=location.search;if(!/[?&]preview=1/.test(q))return;var m=/[?&]asof=([^&]+)/.exec(q);if(!m)return;var RD=Date,t=new RD(decodeURIComponent(m[1])).getTime();if(isNaN(t))return;var off=t-RD.now();
@@ -2332,11 +2332,12 @@ function loadData() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     
-    fetch(SCRIPT_URL + "?cb=" + new Date().getTime() + (/[?&]draft=1/.test(location.search) ? "&mode=draft" : ""), { signal: controller.signal })   // manager-app Draft preview adds &draft=1
+    fetch(SCRIPT_URL + "?cb=" + new Date().getTime() + (/[?&]draft=1/.test(location.search) ? "&mode=draft" : "") + boardRefreshQuery(), { signal: controller.signal })   // manager-app Draft preview adds &draft=1
     .then(r => r.json())
     .then(d => {
         clearTimeout(timeout);
         if (!d || !d.schedule) return;
+        boardRefreshCheck(d);
         if (!/[?&]preview=1/.test(location.search)) { try { localStorage.setItem('bayswater_cache', JSON.stringify(d)); } catch(e) {} }
         schedule = d.schedule;
         computeSeasonDates();
@@ -2648,10 +2649,36 @@ function updateFsBtn() {
   const btn = document.getElementById('fullscreen-btn');
   if (btn) btn.style.display = document.fullscreenElement ? 'none' : '';
 }
-  // Auto-reload daily at 4 AM to pick up code updates
-setInterval(() => {
-    const now = new Date();
-    if (!/[?&]preview=1/.test(location.search) && now.getHours() === 4 && now.getMinutes() < 5) location.reload();   // PREVIEW_GUARD: the manager-app preview never reloads/sends
+
+/* BOARD_REFRESH: the manager app's "Refresh the board" button changes a stamp in the Sheet; when the board sees a new stamp it reloads itself once. Never runs in previews. */
+function boardRefreshSeen() { try { return localStorage.getItem('board_refresh_seen'); } catch (e) { return null; } }
+function boardRefreshCheck(d) {
+    try {
+        if (/[?&](preview|draft)=1/.test(location.search)) return;
+        if (!d || typeof d.refreshStamp !== 'string') return;
+        var st = d.refreshStamp, seen = boardRefreshSeen();
+        if (seen === null) { try { localStorage.setItem('board_refresh_seen', st); } catch (e) {} return; }   // first load: just remember it
+        if (seen === st) return;
+        var last = 0; try { last = parseInt(localStorage.getItem('board_refresh_last') || '0', 10) || 0; } catch (e) {}
+        if (Date.now() - last < 120000) return;                  // never more than one reload per 2 minutes
+        try { localStorage.setItem('board_refresh_seen', st); localStorage.setItem('board_refresh_last', String(Date.now())); } catch (e) { return; }
+        if (boardRefreshSeen() !== st) return;                   // cannot remember it -> never reload (no loop)
+        setTimeout(function () { location.reload(); }, 1500);
+    } catch (e) {}
+}
+function boardRefreshQuery() { var s = boardRefreshSeen(); return (s && !/[?&]preview=1/.test(location.search)) ? '&seen=' + encodeURIComponent(s) : ''; }
+/* NIGHTLY_RELOAD: once a day at 4 AM (not repeated every minute) */
+setInterval(function () {
+    try {
+        var now = new Date();
+        if (/[?&]preview=1/.test(location.search)) return;
+        if (now.getHours() === 4 && now.getMinutes() < 5) {
+            var k = now.toDateString();
+            if (localStorage.getItem('board_4am') === k) return;
+            localStorage.setItem('board_4am', k);
+            location.reload();
+        }
+    } catch (e) {}
 }, 60000);
 </script>
  <!-- ── SCREENSHOT SYSTEM ─────────────────────────────────── -->
